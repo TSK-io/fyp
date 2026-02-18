@@ -6,7 +6,6 @@
 [![Platform](https://img.shields.io/badge/Platform-Raspberry%20Pi%20%7C%20STM32-orange.svg)]()
 
 本项目是一个集环境监测、自动化控制、AI 视觉分析与边缘计算于一体的物联网（IoT）解决方案，专为藏红花全生长周期培育设计。系统采用分层架构：**STM32** 负责底层硬件控制与手势识别，**树莓派 (Raspberry Pi)** 负责边缘计算、Web 服务与 AI 图像处理。
-qwq
 
 ---
 
