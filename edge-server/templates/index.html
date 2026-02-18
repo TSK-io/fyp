@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>藏红花培育系统 - 实时监控与控制</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; background-color: #f0f2f5; color: #333; padding: 20px 0; }
+        .dashboard { background-color: white; padding: 40px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); text-align: center; width: 90%; max-width: 800px; }
+        h1 { margin-top: 0; color: #1a73e8; }
+        .sensors-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-top: 30px; }
+        .data-card { font-size: 1.2em; display: flex; align-items: center; justify-content: center; padding: 15px; background-color: #f8f9fa; border-radius: 8px; border-left: 4px solid #1a73e8; flex-wrap: wrap;}
+        .data-card.gesture-card { border-left-color: #6f42c1; } /* 新增手势卡片样式 */
+        .data-card span { font-weight: bold; color: #e67e22; min-width: 60px; display: inline-block; text-align: left; padding: 0 10px; }
+        #timestamp { margin-top: 30px; font-size: 0.9em; color: #777; }
+        .controls { margin-top: 30px; border-top: 1px solid #eee; padding-top: 20px; }
+        .control-btn { font-size: 1em; padding: 10px 20px; margin: 5px; border: none; border-radius: 5px; color: white; cursor: pointer; transition: background-color: 0.3s; }
+        .btn-on { background-color: #28a745; } .btn-on:hover { background-color: #218838; }
+        .btn-off { background-color: #dc3545; } .btn-off:hover { background-color: #c82333; }
+        .btn-action { background-color: #007bff; } .btn-action:hover { background-color: #0069d9; }
+        .btn-vision { background-color: #6f42c1; } .btn-vision:hover { background-color: #5a32a3; }
+        #control-status { margin-top: 15px; font-style: italic; color: #555; min-height: 1.2em; }
+        #vision-results { margin-top: 20px; padding: 15px; background-color: #e9ecef; border-radius: 8px; text-align: left; display: none; }
+        #vision-results h3 { margin-top: 0; color: #495057; }
+        #vision-results p { margin: 5px 0; }
+        #vision-results img { max-width: 100%; height: auto; border-radius: 4px; margin-top: 10px; }
+    </style>
+</head>
+<body>
+    <div class="dashboard">
+        <h1>🌱 藏红花培育环境监控与控制</h1>
+        <div style="margin: 10px 0 0; text-align:right;">
+            <a href="/history" class="control-btn" style="background-color:#1a73e8; display:inline-block; text-decoration:none;">查看历史数据 ⤴</a>
+            <a href="/admin" class="control-btn" style="background-color:#6f42c1; display:inline-block; text-decoration:none;">后台管理 ⤴</a>
+        </div>
+
+        <div class="sensors-grid">
+            <div class="data-card">🌡️ 温度: <span id="temp">--</span> °C</div>
+            <div class="data-card">💧 湿度: <span id="humi">--</span> %</div>
+            <div class="data-card">☀️ 光照: <span id="lux">--</span> lux</div>
+            <div class="data-card">🌱 土壤: <span id="soil">--</span> %</div>
+            <!-- --- 新增: 手势显示卡片 --- -->
+            <div class="data-card gesture-card">👋 手势: <span id="gesture">--</span></div>
+        </div>
+        <div class="controls">
+            <h2>设备控制</h2>
+            <button id="led-on-btn" class="control-btn btn-on">打开指示灯</button>
+            <button id="led-off-btn" class="control-btn btn-off">关闭指示灯</button>
+            <button id="pump-on-btn" class="control-btn btn-on">开启水泵</button>
+            <button id="pump-off-btn" class="control-btn btn-off">关闭水泵</button>
+            <button id="led-strip-on-btn" class="control-btn btn-on">点亮灯带</button>
+            <button id="led-strip-off-btn" class="control-btn btn-off">熄灭灯带</button>
+            <button id="capture-photo-btn" class="control-btn btn-action">📸 拍照</button>
+            <button id="analyze-vision-btn" class="control-btn btn-vision">🔬 AI视觉分析</button>
+            <div id="control-status"></div>
+        </div>
+
+        <div id="vision-results">
+            <h3>🤖 AI 分析结果</h3>
+            <p><strong>识别颜色:</strong> <span id="vision-color">---</span></p>
+            <p><strong>生长状态:</strong> <span id="vision-stage">---</span></p>
+            <p><strong>置信度分数 (颜色像素数):</strong> <span id="vision-scores">---</span></p>
+            <img id="vision-image" src="" alt="分析后的图像">
+        </div>
+        
+        <div class="controls">
+            <h2>自动灌溉策略</h2>
+            <div style="display:flex; gap:10px; flex-wrap:wrap; justify-content:center; align-items:center;">
+                <label><input type="checkbox" id="policy-enabled"> 启用</label>
+                <label>土壤阈值(%) <input type="number" id="policy-threshold" min="0" max="100" step="0.1" style="width:90px;"></label>
+                <label>浇水时长(s) <input type="number" id="policy-seconds" min="1" max="3600" step="1" style="width:90px;"></label>
+                <label>最小间隔(s) <input type="number" id="policy-cooldown" min="0" max="86400" step="1" style="width:100px;"></label>
+                <label>Admin Token <input type="password" id="admin-token" placeholder="可选" style="width:140px;"></label>
+                <button id="policy-save" class="control-btn" style="background-color:#1a73e8;">保存策略</button>
+            </div>
+            <div id="policy-msg" style="margin-top:8px; color:#555;"></div>
+            <div style="margin-top:8px;">当前自动灌溉状态: <span id="policy-status">未知</span></div>
+        </div>
+        <div id="timestamp">最后更新时间: <span id="update-time">从未</span></div>
+    </div>
+    <script>
+        const sensorApiUrl = '/api/v1/sensors/latest', controlApiUrl = '/api/v1/control';
+        const captureApiUrl = '/api/v1/camera/capture';
+        const visionApiUrl = '/api/v1/vision/analyze';
+
+        const tempElement = document.getElementById('temp'), humiElement = document.getElementById('humi'),
+              luxElement = document.getElementById('lux'), soilElement = document.getElementById('soil'),
+              // --- 新增: 获取手势元素 ---
+              gestureElement = document.getElementById('gesture'),
+              timeElement = document.getElementById('update-time'), statusElement = document.getElementById('control-status');
+
+        async function fetchData() {
+            try {
+                const response = await fetch(sensorApiUrl);
+                if (!response.ok) throw new Error(`HTTP 错误! 状态: ${response.status}`);
+                const data = await response.json();
+                tempElement.textContent = data.temperature ?? '--';
+                humiElement.textContent = data.humidity ?? '--';
+                luxElement.textContent = data.lux ? data.lux.toFixed(1) : '--';
+                soilElement.textContent = data.soil ?? '--';
+                // --- 新增: 更新手势显示 ---
+                gestureElement.textContent = data.gesture ?? '--';
+                timeElement.textContent = data.timestamp ?? 'N/A';
+            } catch (error) {
+                console.error("获取数据失败:", error);
+                tempElement.textContent = '❌'; humiElement.textContent = '❌';
+                luxElement.textContent = '❌'; soilElement.textContent = '❌';
+                // --- 新增: 更新手势错误状态 ---
+                gestureElement.textContent = '❌';
+                timeElement.textContent = '连接失败';
+            }
+        }
+
+        async function sendControlCommand(command) {
+            statusElement.textContent = `正在发送命令: ${command}...`;
+            try {
+                const response = await fetch(controlApiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ command: command })
+                });
+                const result = await response.json();
+                if (!response.ok) throw new Error(result.message || '未知错误');
+                statusElement.textContent = `成功: ${result.message}`;
+            } catch (error) {
+                console.error("发送命令失败:", error);
+                statusElement.textContent = `错误: ${error.message}`;
+            }
+        }
+        
+        async function capturePhoto() {
+            statusElement.textContent = `正在启动摄像头并拍照...`;
+            try {
+                const response = await fetch(captureApiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                const result = await response.json();
+                if (!response.ok) throw new Error(result.message || '未知错误');
+                statusElement.innerHTML = `✅ ${result.message} <br> <a href="/${result.path}" target="_blank">点击查看照片</a>`;
+            } catch (error) {
+                console.error("拍照失败:", error);
+                statusElement.textContent = `❌ 拍照错误: ${error.message}`;
+            }
+        }
+
+        async function analyzeVision() {
+            statusElement.textContent = '🤖 正在启动AI视觉分析，请稍候...';
+            document.getElementById('vision-results').style.display = 'none';
+            try {
+                const response = await fetch(visionApiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                const result = await response.json();
+                if (!response.ok || result.status !== 'success') {
+                    throw new Error(result.message || 'AI分析失败');
+                }
+                document.getElementById('vision-color').textContent = result.detected_color;
+                document.getElementById('vision-stage').textContent = result.growth_stage;
+                document.getElementById('vision-scores').textContent = JSON.stringify(result.scores);
+                document.getElementById('vision-image').src = result.analysis_image_url + '?t=' + new Date().getTime();
+                document.getElementById('vision-results').style.display = 'block';
+                statusElement.textContent = '✅ AI视觉分析完成！';
+            } catch (error) {
+                console.error("AI分析失败:", error);
+                statusElement.textContent = `❌ AI分析错误: ${error.message}`;
+            }
+        }
+
+        const policyGetUrl = '/api/v1/policy/irrigation', policyPostUrl = '/api/v1/policy/irrigation', policyStatusUrl = '/api/v1/policy/irrigation/status';
+        async function loadPolicy(){try{const r=await fetch(policyGetUrl);const p=await r.json();const en=!!(p&&(p.enabled===1||p.enabled===true));const th=p&&p.soil_threshold_min!=null?p.soil_threshold_min:'';const sec=p&&p.watering_seconds!=null?p.watering_seconds:'';const cd=p&&p.cooldown_seconds!=null?p.cooldown_seconds:'';document.getElementById('policy-enabled').checked=en;document.getElementById('policy-threshold').value=th;document.getElementById('policy-seconds').value=sec;document.getElementById('policy-cooldown').value=cd;}catch(e){document.getElementById('policy-msg').textContent='无法加载策略';}}
+        async function savePolicy(){const enabled=document.getElementById('policy-enabled').checked;const soil=parseFloat(document.getElementById('policy-threshold').value);const secs=parseInt(document.getElementById('policy-seconds').value,10);const cd=parseInt(document.getElementById('policy-cooldown').value,10);const token=(document.getElementById('admin-token').value||'').trim();const msg=document.getElementById('policy-msg');msg.textContent='正在保存...';try{const headers={'Content-Type':'application/json'};if(token)headers['X-Admin-Token']=token;const r=await fetch(policyPostUrl,{method:'POST',headers,body:JSON.stringify({enabled:enabled,soil_threshold_min:soil,watering_seconds:secs,cooldown_seconds:cd})});const res=await r.json();if(!r.ok)throw new Error(res.error||'保存失败');msg.textContent='已保存 ✔';loadPolicy();}catch(e){msg.textContent='错误: '+e.message;}}
+        async function refreshPolicyStatus(){try{const r=await fetch(policyStatusUrl);if(!r.ok)throw new Error('HTTP '+r.status);const s=await r.json();document.getElementById('policy-status').textContent=s.watering?('浇水中，开始于 '+(s.last_start_ts||'')):('空闲，上次结束于 '+(s.last_end_ts||'未知'));}catch(e){document.getElementById('policy-status').textContent='状态不可用';}}
+        document.getElementById('policy-save')?.addEventListener('click',savePolicy);loadPolicy();refreshPolicyStatus();setInterval(refreshPolicyStatus,3000);
+
+
+        document.getElementById('led-on-btn').addEventListener('click', () => sendControlCommand('led_on'));
+        document.getElementById('led-off-btn').addEventListener('click', () => sendControlCommand('led_off'));
+        document.getElementById('pump-on-btn').addEventListener('click', () => sendControlCommand(JSON.stringify({actuator:'pump', action:'on'})));
+        document.getElementById('pump-off-btn').addEventListener('click', () => sendControlCommand(JSON.stringify({actuator:'pump', action:'off'})));
+        document.getElementById('led-strip-on-btn').addEventListener('click', () => sendControlCommand(JSON.stringify({actuator:'led_strip', action:'on'})));
+        document.getElementById('led-strip-off-btn').addEventListener('click', () => sendControlCommand(JSON.stringify({actuator:'led_strip', action:'off'})));
+        document.getElementById('capture-photo-btn').addEventListener('click', capturePhoto);
+        document.getElementById('analyze-vision-btn').addEventListener('click', analyzeVision);
+
+        fetchData();
+        setInterval(fetchData, 1000);
+    </script>
+</body>
+</html>

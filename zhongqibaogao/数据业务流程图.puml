@@ -1,0 +1,73 @@
+
+@startuml
+title 藏红花智能培育系统 - 数据业务流程
+
+' =================================
+' 样式设置核心修改区域
+' =================================
+' 1. 基础设置
+skinparam linetype ortho
+skinparam shadowing false
+skinparam packageStyle rectangle
+top to bottom direction
+
+' 【关键修改点】增加间距
+' nodesep 控制水平间距（解决左右排列时的拥挤，如树莓派内部）
+' ranksep 控制垂直间距（解决上下层级间的标签重叠）
+skinparam nodesep 60
+skinparam ranksep 50
+
+' 优化连接线标签背景，防止透明遮挡（可选）
+skinparam ArrowMessageAlignment center
+skinparam GenerateMessageBackground white
+' =================================
+
+
+' 2. 定义模块 (保持不变)
+package "第一层：感知与执行 (STM32)" {
+    rectangle "各类传感器\n(温湿度/光照/土壤)" as Sensors
+    rectangle "STM32单片机\n(数据打包)" as MCU
+    rectangle "OLED屏幕\n(本地显示)" as OLED
+}
+
+package "传输链路" {
+    rectangle "USB虚拟串口\n(JSON数据流)" as Serial
+}
+
+package "第二层：边缘计算 (树莓派)" {
+    ' 使用 hidden link 强制定义内部相对位置，辅助布局
+    rectangle "串口读取程序" as SerialThread
+    rectangle "Flask后端服务\n(Web API)" as WebServer
+    rectangle "SQLite数据库\n(存储历史)" as DB
+    
+    ' 【微调】强制让 WebServer 在 SerialThread 右侧，DB 在下方
+    SerialThread -[hidden]right- WebServer
+    SerialThread -[hidden]down- DB
+}
+
+package "第三层：用户终端" {
+    rectangle "用户手机/电脑\n(浏览器)" as User
+}
+
+' 3. 定义连线（逻辑流向）
+
+' 感知层内部
+Sensors -down-> MCU : 1.采集数据
+MCU -right-> OLED : 显示
+
+' 跨层传输
+' 【微调】使用 -- 代替 - 可以稍微增加该线条的权重和长度
+MCU --down-> Serial : 2.发送
+Serial --down-> SerialThread : 3.读取
+
+' 边缘层内部处理
+SerialThread -down-> DB : 4.存入数据库
+' 由于增加了 nodesep，这里的横向标签应该不会重叠了
+SerialThread -right-> WebServer : 实时数据更新
+
+' 用户交互
+' 【微调】增加线条长度，避免与 Flask 盒子交叉过紧
+User -up-> WebServer : 5.访问网页/API
+WebServer --up-> User : 6.返回监测数据
+
+@enduml

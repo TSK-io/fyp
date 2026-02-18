@@ -1,0 +1,82 @@
+@startuml
+' 设置：直线条，去除阴影，黑白简洁风格
+skinparam linetype ortho
+skinparam shadowing false
+skinparam packageStyle rectangle
+hide circle
+top to bottom direction
+
+' --- 实体定义 (Entities) ---
+
+entity "Users (用户)" as users {
+  *id : INTEGER <<PK>>
+  --
+  username : TEXT
+  password_hash : TEXT
+  created_at : DATETIME
+}
+
+entity "Roles (角色)" as roles {
+  *id : INTEGER <<PK>>
+  --
+  name : TEXT
+}
+
+entity "User_Roles (用户角色关联)" as user_roles {
+  *user_id : INTEGER <<PK,FK>>
+  *role_id : INTEGER <<PK,FK>>
+}
+
+entity "Devices (设备)" as devices {
+  *id : INTEGER <<PK>>
+  --
+  name : TEXT
+  description : TEXT
+  last_seen : DATETIME
+}
+
+entity "Sensor_Data (环境监测数据)" as sensor_data {
+  *id : INTEGER <<PK>>
+  --
+  *device_id : INTEGER <<FK>>
+  temperature : REAL
+  humidity : REAL
+  lux : REAL
+  soil : REAL
+  timestamp : DATETIME
+}
+
+entity "Control_Logs (控制日志)" as control_logs {
+  *id : INTEGER <<PK>>
+  --
+  *device_id : INTEGER <<FK>>
+  actuator : TEXT
+  action : TEXT
+  raw_command : TEXT
+  success : INTEGER
+  created_at : DATETIME
+}
+
+entity "Irrigation_Policies (灌溉策略)" as policies {
+  *id : INTEGER <<PK>>
+  --
+  *device_id : INTEGER <<FK>>
+  enabled : INTEGER
+  soil_threshold_min : REAL
+  watering_seconds : INTEGER
+  cooldown_seconds : INTEGER
+  updated_at : DATETIME
+}
+
+' --- 关系定义 (Relationships) ---
+
+' 用户与角色是多对多关系
+users ||..|{ user_roles : "拥有"
+roles ||..|{ user_roles : "被分配"
+
+' 设备与各项数据是一对多关系
+devices ||--o{ sensor_data : "生成"
+devices ||--o{ control_logs : "产生"
+devices ||--o{ policies : "配置"
+
+@enduml

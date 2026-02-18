@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>后台管理 - 藏红花培育系统</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; margin: 0; background: #f6f7fb; color: #333; }
+    header { background: #6f42c1; color: #fff; padding: 14px 18px; display:flex; align-items:center; justify-content:space-between; }
+    header a { color: #fff; text-decoration: none; margin-right: 12px; }
+    main { padding: 16px; max-width: 1100px; margin: 0 auto; }
+    .grid { display: grid; gap: 16px; grid-template-columns: 1fr; }
+    @media (min-width: 980px) { .grid { grid-template-columns: 1fr 1fr; } }
+    .card { background: #fff; border-radius: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.06); padding: 12px; }
+    .card h2 { margin: 6px 8px 12px; font-size: 18px; color: #6f42c1; }
+    label { display:inline-flex; align-items:center; gap:6px; margin: 6px 8px; }
+    input, button { padding: 8px 10px; font-size: 14px; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { border-bottom: 1px solid #eee; padding: 6px 8px; font-size: 13px; }
+    th { text-align:left; color:#555; }
+    .muted { color:#777; font-size:13px; }
+    .row { display:flex; gap:12px; flex-wrap:wrap; align-items:center; }
+    .ok { color: #2e7d32; }
+    .err { color: #c62828; }
+  </style>
+</head>
+<body>
+  <header>
+    <div>🛠️ 后台管理</div>
+    <nav>
+      <a href="/">返回实时</a>
+      <a href="/history">历史</a>
+    </nav>
+  </header>
+  <main>
+    <div class="muted" id="auth-info" style="margin:8px 0 14px 4px;">登录状态：检测中...</div>
+
+    <div class="grid">
+      <section class="card">
+        <h2>自动灌溉策略</h2>
+        <div class="row">
+          <label><input type="checkbox" id="en"> 启用</label>
+          <label>土壤阈值(%) <input id="th" type="number" min="0" max="100" step="0.1" style="width:100px"></label>
+          <label>浇水时长(s) <input id="sec" type="number" min="1" max="3600" step="1" style="width:100px"></label>
+          <label>最小间隔(s) <input id="cd" type="number" min="0" max="86400" step="1" style="width:110px"></label>
+        </div>
+        <div class="row">
+          <label>Admin Token <input id="tok" type="password" placeholder="可选（或使用登录令牌）" style="width:160px"></label>
+          <button id="save">保存策略</button>
+          <span id="msg" class="muted"></span>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>最近控制日志</h2>
+        <div class="row">
+          <label>显示条数 <input id="limit" type="number" min="10" max="500" step="10" value="100" style="width:90px"></label>
+          <button id="reload">刷新</button>
+        </div>
+        <div class="muted" id="status">就绪</div>
+        <div style="overflow:auto; max-height: 420px;">
+          <table>
+            <thead><tr><th>时间</th><th>执行器</th><th>动作</th><th>成功</th></tr></thead>
+            <tbody id="logs"></tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <script>
+    async function loadPolicy(){
+      try{
+        const r = await fetch('/api/v1/policy/irrigation');
+        const p = await r.json();
+        document.getElementById('en').checked = !!(p && (p.enabled===1||p.enabled===true));
+        document.getElementById('th').value = p && p.soil_threshold_min!=null ? p.soil_threshold_min : '';
+        document.getElementById('sec').value = p && p.watering_seconds!=null ? p.watering_seconds : '';
+        document.getElementById('cd').value = p && p.cooldown_seconds!=null ? p.cooldown_seconds : '';
+      }catch(e){ document.getElementById('msg').textContent='加载策略失败'; }
+    }
+    async function savePolicy(){
+      const enabled = document.getElementById('en').checked;
+      const th = parseFloat(document.getElementById('th').value);
+      const sec = parseInt(document.getElementById('sec').value,10);
+      const cd = parseInt(document.getElementById('cd').value,10);
+      const tok = (document.getElementById('tok').value||'').trim();
+      const msg = document.getElementById('msg'); msg.textContent='保存中...';
+      try{
+        const headers = {'Content-Type':'application/json'};
+        const t = localStorage.getItem('auth_token'); if (t) headers['Authorization'] = 'Bearer ' + t;
+        if (tok) headers['X-Admin-Token'] = tok;
+        if (!t && !tok) { msg.textContent = '\u8bf7\u5148\u767b\u5f55\u6216\u586b\u5199 Admin Token'; return; }
+        const payload = {enabled:enabled, soil_threshold_min:th, watering_seconds:sec, cooldown_seconds:cd};
+        if (tok) payload.admin_token = tok; // body 也带上，双保险
+        const r = await fetch('/api/v1/policy/irrigation',{method:'POST', headers, body: JSON.stringify(payload)});
+        const js = await r.json();
+        if(!r.ok) throw new Error(js.error||'保存失败');
+        msg.textContent='已保存 ✔';
+        loadPolicy();
+      }catch(e){ msg.textContent='错误: '+e.message; }
+    }
+
+    async function loadLogs(){
+      const limit = Math.max(10, Math.min(500, parseInt(document.getElementById('limit').value||'100')));
+      const status = document.getElementById('status'); status.textContent='加载中...';
+      try{
+        const r = await fetch('/api/v1/control/logs?limit='+limit);
+        if(!r.ok) throw new Error('HTTP '+r.status);
+        const js = await r.json();
+    async function checkAuth(){
+      const el = document.getElementById('auth-info');
+      const t = localStorage.getItem('auth_token');
+      if(!t){ el.textContent='登录状态：未登录（可前往 /login 登录）'; return; }
+      try{
+        const r = await fetch('/api/v1/auth/me', {headers: {'Authorization': 'Bearer '+t}});
+        if(!r.ok){ el.textContent='登录状态：未登录或令牌失效（请重新登录）'; return; }
+        const js = await r.json();
+        el.textContent = `登录状态：${js.username}（角色：${(js.roles||[]).join(', ')||'无'}）`;
+      }catch(e){ el.textContent='登录状态：检测失败'; }
+    }
+
+        const items = js.items || [];
+        const tbody = document.getElementById('logs');
+        tbody.innerHTML = items.map(it=>`<tr><td>${it.created_at||''}</td><td>${it.actuator||''}</td><td>${it.action||''}</td><td>${it.success?'<span class=ok>是</span>':'<span class=err>否</span>'}</td></tr>`).join('');
+        status.textContent = `共 ${items.length} 条`;
+      }catch(e){ status.textContent='加载失败: '+e.message; }
+    }
+
+    document.getElementById('save').addEventListener('click', savePolicy);
+    document.getElementById('reload').addEventListener('click', loadLogs);
+    loadPolicy();
+    checkAuth();
+
+    loadLogs();
+  </script>
+</body>
+</html>
+

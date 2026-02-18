@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>历史数据 - 藏红花培育系统</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; margin: 0; background: #f6f7fb; color: #333; }
+    header { background: #1a73e8; color: #fff; padding: 14px 18px; display: flex; align-items: center; justify-content: space-between; }
+    header a { color: #fff; text-decoration: none; margin-right: 12px; }
+    main { padding: 16px; max-width: 1100px; margin: 0 auto; }
+    .filters { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; }
+    .filters input, .filters button { padding: 8px 10px; font-size: 14px; }
+    .grid { display: grid; gap: 16px; grid-template-columns: 1fr; }
+    @media (min-width: 920px) { .grid { grid-template-columns: 1fr 1fr; } }
+    .card { background: #fff; border-radius: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.06); padding: 12px; }
+    .card h3 { margin: 6px 8px 12px; font-size: 16px; color: #1a73e8; }
+    #status { margin: 8px 0 16px; color: #666; font-size: 13px; }
+    .muted { color: #777; font-size: 13px; }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+</head>
+<body>
+  <header>
+    <div>📈 历史数据 - 藏红花培育系统</div>
+    <nav>
+      <a href="/">返回实时</a>
+      <a href="/history">历史</a>
+    </nav>
+  </header>
+  <main>
+    <div class="filters">
+      <label>开始时间 <input id="start" type="datetime-local" /></label>
+      <label>结束时间 <input id="end" type="datetime-local" /></label>
+      <input id="limit" type="number" min="10" max="1000" step="10" value="200" />
+      <button id="load">加载</button>
+      <button id="export">导出 CSV</button>
+      <span id="status" class="muted">就绪</span>
+    </div>
+
+    <div class="grid">
+      <div class="card">
+        <h3>温度 / 湿度</h3>
+        <div id="chart-th" style="height: 360px;"></div>
+      </div>
+      <div class="card">
+        <h3>光照 / 土壤湿度</h3>
+        <div id="chart-ls" style="height: 360px;"></div>
+      </div>
+    </div>
+
+    <p class="muted">提示：时间范围为空时将加载最近的 N 条记录（默认 200）。数据每10秒自动刷新一次。</p>
+  </main>
+
+  <script>
+    const api = {
+      history: '/api/v1/sensors/history'
+    };
+
+    const el = (id) => document.getElementById(id);
+
+    const thChart = echarts.init(el('chart-th'));
+    const lsChart = echarts.init(el('chart-ls'));
+
+    function toDateTimeLocalString(d) {
+      const pad = (n)=> String(n).padStart(2,'0');
+      return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+    }
+
+    function dtLocalToQuery(v) {
+      // Convert datetime-local value to 'YYYY-MM-DD HH:MM:SS'
+      if (!v) return '';
+      return v.replace('T', ' ');
+    }
+
+    async function loadData() {
+      const s = dtLocalToQuery(el('start').value);
+      const e = dtLocalToQuery(el('end').value);
+      const limit = Math.max(10, Math.min(1000, parseInt(el('limit').value || '200')));
+
+      const qs = new URLSearchParams();
+      if (s) qs.set('start', s);
+      if (e) qs.set('end', e);
+      qs.set('limit', String(limit));
+
+      el('status').textContent = '加载中...';
+      try {
+        const resp = await fetch(`${api.history}?${qs.toString()}`);
+        if (!resp.ok) throw new Error('HTTP ' + resp.status);
+        const json = await resp.json();
+        const items = json.items || [];
+        // items 为按 id DESC 排序，绘图需要时间升序
+        items.reverse();
+
+        const xs = items.map(r => r.timestamp);
+        const temp = items.map(r => r.temperature);
+        const humi = items.map(r => r.humidity);
+        const lux = items.map(r => r.lux);
+        const soil = items.map(r => r.soil);
+
+        thChart.setOption({
+          tooltip: { trigger: 'axis' },
+          legend: { data: ['温度(°C)','湿度(%)'] },
+          xAxis: { type: 'category', data: xs },
+          yAxis: [
+            { type: 'value', name: '温度(°C)' },
+            { type: 'value', name: '湿度(%)' }
+          ],
+          series: [
+            { name: '温度(°C)', type: 'line', data: temp, smooth: true },
+            { name: '湿度(%)', type: 'line', yAxisIndex: 1, data: humi, smooth: true }
+          ]
+        });
+
+        // 叠加灌溉事件区间
+        let intervals = [];
+        try {
+          const logQs = new URLSearchParams();
+          if (s) logQs.set('start', s);
+          if (e) logQs.set('end', e);
+          logQs.set('actuator', 'pump');
+          logQs.set('limit', '500');
+          const logsResp = await fetch('/api/v1/control/logs?' + logQs.toString());
+          if (logsResp.ok) {
+            const logsJson = await logsResp.json();
+            const logs = (logsJson.items || []).slice().reverse(); // 时间升序
+            let currentStart = null;
+            for (const it of logs) {
+              if (it.action === 'on' && !currentStart) {
+                currentStart = it.created_at || it.timestamp || it.time || it.createdAt || it.ts;
+              } else if (it.action === 'off' && currentStart) {
+                const endTs = it.created_at || it.timestamp || it.time || it.createdAt || it.ts;
+                if (currentStart && endTs) {
+                  intervals.push([
+                    { xAxis: currentStart },
+                    { xAxis: endTs }
+                  ]);
+                }
+                currentStart = null;
+              }
+            }
+          }
+        } catch (err) {
+          console.warn('加载灌溉日志失败', err);
+        }
+
+        lsChart.setOption({
+          tooltip: { trigger: 'axis' },
+          legend: { data: ['光照(lux)','土壤(%)','灌溉区间'] },
+          xAxis: { type: 'category', data: xs },
+          yAxis: [
+            { type: 'value', name: '光照(lux)' },
+            { type: 'value', name: '土壤(%)' }
+          ],
+          series: [
+            { name: '光照(lux)', type: 'line', data: lux, smooth: true },
+            { name: '土壤(%)', type: 'line', yAxisIndex: 1, data: soil, smooth: true,
+              markArea: intervals.length ? {
+                itemStyle: { color: 'rgba(40,167,69,0.12)' },
+                data: intervals
+              } : undefined
+            }
+          ]
+        });
+
+        el('status').textContent = `加载完成：${items.length} 条`;
+      } catch (err) {
+        console.error(err);
+        el('status').textContent = '加载失败：' + err.message;
+      }
+    }
+
+    // 初始化日期：默认空（最近N条）；提供快捷最近1小时示例
+    function initDefaults() {
+      const now = new Date();
+      const h1ago = new Date(now.getTime() - 60*60*1000);
+      // 示例：如需默认显示最近1小时，可取消注释
+      // el('start').value = toDateTimeLocalString(h1ago);
+      // el('end').value = toDateTimeLocalString(now);
+    }
+
+    el('export').addEventListener('click', () => {
+      const s = dtLocalToQuery(el('start').value);
+      const e = dtLocalToQuery(el('end').value);
+      const limit = Math.max(10, Math.min(1000, parseInt(el('limit').value || '200')));
+      const qs = new URLSearchParams();
+      if (s) qs.set('start', s);
+      if (e) qs.set('end', e);
+      qs.set('limit', String(limit));
+      window.open('/api/v1/sensors/history.csv?' + qs.toString(), '_blank');
+    });
+
+    el('load').addEventListener('click', loadData);
+    window.addEventListener('resize', () => { thChart.resize(); lsChart.resize(); });
+
+    initDefaults();
+    loadData();
+    setInterval(loadData, 10000);
+  </script>
+</body>
+</html>
+

@@ -1,0 +1,8 @@
+Flask
+flask-cors
+pyserial
+mpremote
+opencv-python-headless
+requests
+itsdangerous
+werkzeug

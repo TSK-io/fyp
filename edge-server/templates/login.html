@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>登录 - 藏红花培育系统</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; margin:0; background:#f6f7fb; }
+    .wrap { max-width: 420px; margin: 12vh auto; background: #fff; border-radius: 12px; box-shadow: 0 10px 24px rgba(0,0,0,0.08); overflow: hidden; }
+    header { background: #6f42c1; color: #fff; padding: 16px 18px; font-size: 18px; }
+    main { padding: 18px; }
+    label { display:block; margin: 10px 0 6px; color:#555; }
+    input { width: 100%; box-sizing: border-box; padding:10px 12px; border:1px solid #ddd; border-radius:8px; font-size:14px; }
+    button { width: 100%; padding: 10px 12px; border: 0; border-radius: 8px; background: #6f42c1; color: #fff; font-size: 15px; margin-top: 14px; cursor: pointer; }
+    .muted { color: #777; font-size: 13px; margin-top: 10px; text-align:center; }
+    .row { display:flex; gap:10px; }
+    .alt { background:#5a32b0; }
+    a { color:#6f42c1; text-decoration:none; }
+    .nav { text-align:center; padding: 12px; font-size: 14px; background:#faf9ff; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>用户登录</header>
+    <main>
+      <label>用户名</label>
+      <input id="username" type="text" placeholder="首个注册用户将成为管理员" />
+      <label>密码</label>
+      <input id="password" type="password" placeholder="不少于 6 位建议" />
+      <div class="row">
+        <button id="btn-login">登录</button>
+        <button id="btn-register" class="alt">注册并登录</button>
+      </div>
+      <div id="msg" class="muted"></div>
+    </main>
+    <div class="nav">
+      <a href="/">返回首页</a> · <a href="/admin">后台管理</a>
+    </div>
+  </div>
+
+  <script>
+    async function doLoginRegister(url){
+      const u = document.getElementById('username').value.trim();
+      const p = document.getElementById('password').value;
+      const msg = document.getElementById('msg'); msg.textContent='...';
+      try{
+        const r = await fetch(url, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({username:u, password:p})});
+        const js = await r.json();
+        if(!r.ok){ throw new Error(js.error||('HTTP '+r.status)); }
+        if(!js.token){ throw new Error('未返回令牌'); }
+        localStorage.setItem('auth_token', js.token);
+        msg.textContent='登录成功，正在跳转 ...';
+        location.href = '/admin';
+      }catch(e){ msg.textContent='错误: '+e.message; }
+    }
+    document.getElementById('btn-login').addEventListener('click', ()=>doLoginRegister('/api/v1/auth/login'));
+    document.getElementById('btn-register').addEventListener('click', ()=>doLoginRegister('/api/v1/auth/register'));
+  </script>
+</body>
+</html>
+

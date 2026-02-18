@@ -1,0 +1,45 @@
+@startuml
+' 设置：从左到右布局，直线条，无阴影，简洁风格
+left to right direction
+skinparam packageStyle rectangle
+skinparam shadowing false
+skinparam linetype ortho
+
+' 定义角色
+actor "普通用户\n(种植户/Observer)" as User
+actor "系统管理员\n(Admin)" as Admin
+
+' 定义系统边界
+rectangle "藏红花智能培育系统" {
+    
+    ' --- 普通用户功能区域 ---
+    usecase "查看实时环境数据\n(温湿度/光照/土壤)" as UC1
+    usecase "查看历史趋势图表" as UC2
+    usecase "查看AI视觉分析结果\n(生长阶段判定)" as UC3
+    usecase "手势交互控制\n(现场屏幕切换)" as UC4
+
+    ' --- 管理员特权功能区域 ---
+    usecase "系统登录与身份认证" as UC5
+    usecase "配置自动灌溉策略\n(设定湿度阈值)" as UC6
+    usecase "远程手动控制设备\n(水泵/补光灯)" as UC7
+    usecase "查看操作审计日志" as UC8
+}
+
+' --- 关系定义 ---
+
+' 1. 普通用户的连线
+User --> UC1
+User --> UC2
+User --> UC3
+User --> UC4
+
+' 2. 管理员继承普通用户的所有权限 (空心三角箭头)
+Admin --|> User
+
+' 3. 管理员的独有权限连线
+Admin --> UC5
+Admin --> UC6
+Admin --> UC7
+Admin --> UC8
+
+@enduml
