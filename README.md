@@ -75,4 +75,5 @@ chmod +x setup.sh
     ```
     卸载后，Python 会自动回退使用系统自带的 `numpy` (通常是 1.24.x)，此时即可正常工作。
 
+接线SCL一定要接PB6,SDA一定要接PB7
 ---
