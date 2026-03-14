@@ -42,6 +42,7 @@
             <!-- --- 新增: 手势显示卡片 --- -->
             <div class="data-card gesture-card">👋 手势: <span id="gesture">--</span></div>
         </div>
+
         <div class="controls">
             <h2>设备控制</h2>
             <button id="led-on-btn" class="control-btn btn-on">打开指示灯</button>
@@ -51,12 +52,12 @@
             <button id="led-strip-on-btn" class="control-btn btn-on">点亮灯带</button>
             <button id="led-strip-off-btn" class="control-btn btn-off">熄灭灯带</button>
             <button id="capture-photo-btn" class="control-btn btn-action">📸 拍照</button>
-            <button id="analyze-vision-btn" class="control-btn btn-vision">🔬 AI视觉分析</button>
+            <button id="analyze-vision-btn" class="control-btn btn-vision">🔬 视觉分析</button>
             <div id="control-status"></div>
         </div>
 
         <div id="vision-results">
-            <h3>🤖 AI 分析结果</h3>
+            <h3>🔬 视觉分析结果</h3>
             <p><strong>识别颜色:</strong> <span id="vision-color">---</span></p>
             <p><strong>生长状态:</strong> <span id="vision-stage">---</span></p>
             <p><strong>置信度分数 (颜色像素数):</strong> <span id="vision-scores">---</span></p>
@@ -152,8 +153,8 @@
             }
         }
 
-        async function analyzeVision() {
-            statusElement.textContent = '🤖 正在启动AI视觉分析，请稍候...';
+async function analyzeVision() {
+            statusElement.textContent = '📸 正在启动视觉分析，请稍候...';
             document.getElementById('vision-results').style.display = 'none';
             try {
                 const response = await fetch(visionApiUrl, {
@@ -162,17 +163,17 @@
                 });
                 const result = await response.json();
                 if (!response.ok || result.status !== 'success') {
-                    throw new Error(result.message || 'AI分析失败');
+                    throw new Error(result.message || '视觉分析失败');
                 }
                 document.getElementById('vision-color').textContent = result.detected_color;
                 document.getElementById('vision-stage').textContent = result.growth_stage;
                 document.getElementById('vision-scores').textContent = JSON.stringify(result.scores);
                 document.getElementById('vision-image').src = result.analysis_image_url + '?t=' + new Date().getTime();
                 document.getElementById('vision-results').style.display = 'block';
-                statusElement.textContent = '✅ AI视觉分析完成！';
+                statusElement.textContent = '✅ 视觉分析完成！';
             } catch (error) {
-                console.error("AI分析失败:", error);
-                statusElement.textContent = `❌ AI分析错误: ${error.message}`;
+                console.error("视觉分析失败:", error);
+                statusElement.textContent = `❌ 视觉分析错误: ${error.message}`;
             }
         }
 
