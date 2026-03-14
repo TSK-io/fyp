@@ -13,3 +13,8 @@ __pycache__/
 
 .venv
 *.jpg
+
+# --- AI Models ---
+edge-server/models/
+*.gguf
+*.bin
