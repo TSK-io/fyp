@@ -8,3 +8,5 @@ hf download unsloth/Qwen3.5-0.8B-GGUF \
   Qwen3.5-0.8B-Q4_K_M.gguf \
   --local-dir ./qwen3.5-0.8b
 
+CMAKE_ARGS="-DGGML_CPU_ARM_ARCH=armv8-a" pip install llama-cpp-python
+
