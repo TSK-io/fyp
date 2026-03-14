@@ -1,12 +1,7 @@
 sudo apt -y install python3-pip python3-numpy python3-opencv python3-picamera2 hx build-essential cmake ripgrep
 pip install mpremote --break-system-packages
-# 安装工具
-pip install huggingface_hub --break-system-packages
 
-# 下载指定文件
-hf download unsloth/Qwen3.5-0.8B-GGUF \
-  Qwen3.5-0.8B-Q4_K_M.gguf \
-  --local-dir ./qwen3.5-0.8b
+wget https://huggingface.co/Qwen/Qwen2.5-0.5B-Instruct-GGUF/resolve/main/qwen2.5-0.5b-instruct-q4_k_m.gguf -O $HOME/fyp/edge-server/models/qwen2.5-0.5b-instruct-q4_k_m.gguf
 
 CMAKE_ARGS="-DGGML_CPU_ARM_ARCH=armv8-a" pip install llama-cpp-python
 

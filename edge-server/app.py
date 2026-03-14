@@ -27,7 +27,7 @@ except Exception as e:
 
 # LLM 全局对象
 llm_model = None
-LLM_MODEL_PATH = os.path.join(os.path.dirname(__file__), 'models', 'Qwen3.5-0.8B-Q4_K_M.gguf')
+LLM_MODEL_PATH = os.path.join(os.path.dirname(__file__), 'models', 'qwen2.5-0.5b-instruct-q4_k_m.gguf')
 
 def get_llm():
     """延迟加载模型，节省内存并避免阻塞启动"""
