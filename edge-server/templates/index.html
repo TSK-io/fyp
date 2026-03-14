@@ -149,11 +149,14 @@
 
         <div class="meta-info">
             📡 数据最后同步于: <span id="update-time">从未</span> | STM32 MicroPython & Raspberry Pi
+            <br>
+            <div id="cloud-badge" style="margin-top: 12px; display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: 20px; font-size: 13px; font-weight: 600; border: 1px solid #d1d5db; background: #f3f4f6; color: #4b5563; transition: all 0.3s;">
+                ☁️ 探测云端连接状态...
+            </div>
         </div>
     </div>
 
     <script>
-        // 完全保留原有 JS 逻辑
         const sensorApiUrl = '/api/v1/sensors/latest', controlApiUrl = '/api/v1/control';
         const captureApiUrl = '/api/v1/camera/capture';
         const visionApiUrl = '/api/v1/vision/analyze';
@@ -174,6 +177,21 @@
                 soilElement.textContent = data.soil ?? '--';
                 gestureElement.textContent = data.gesture ?? '暂无识别';
                 timeElement.textContent = data.timestamp ?? 'N/A';
+                
+                // --- 更新云端同步状态 UI ---
+                const cloudBadge = document.getElementById('cloud-badge');
+                if (data.cloud_ok) {
+                    cloudBadge.style.backgroundColor = '#d1fae5';
+                    cloudBadge.style.borderColor = '#10b981';
+                    cloudBadge.style.color = '#065f46';
+                    cloudBadge.innerHTML = '☁️ 边云协同正常 (数据实时上云中)';
+                } else {
+                    cloudBadge.style.backgroundColor = '#fee2e2';
+                    cloudBadge.style.borderColor = '#ef4444';
+                    cloudBadge.style.color = '#991b1b';
+                    cloudBadge.innerHTML = '⚠ 边缘自治模式 (云端断线，本地闭环运行)';
+                }
+                
             } catch (error) {
                 console.error("获取数据失败:", error);
                 tempElement.textContent = '❌'; humiElement.textContent = '❌';

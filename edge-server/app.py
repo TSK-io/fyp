@@ -1,4 +1,4 @@
-# Saffron_Edge_Server/app.py (优化版 v3.1 - 集成手势识别)
+# Saffron_Edge_Server/app.py (优化版 v4.0 - 集成边云协同 MQTT)
 
 import serial
 import json
@@ -11,12 +11,46 @@ from flask_cors import CORS
 import os
 from itsdangerous import URLSafeTimedSerializer, BadSignature, SignatureExpired
 from werkzeug.security import generate_password_hash, check_password_hash
-
-# --- 视觉处理库保持不变 ---
 import cv2
 import numpy as np
 
-# --- 在原有导入(import cv2, numpy 等)的下方添加 ---
+# --- 新增: MQTT 云端同步配置 ---
+import paho.mqtt.client as mqtt
+
+CLOUD_MQTT_IP = "104.248.150.11"
+MQTT_TOPIC = "saffron/telemetry"
+cloud_sync_ok = False
+
+# 兼容不同版本的 paho-mqtt
+try:
+    mqtt_client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION1)
+except AttributeError:
+    mqtt_client = mqtt.Client()
+
+def on_mqtt_connect(client, userdata, flags, rc, *args):
+    global cloud_sync_ok
+    if rc == 0:
+        cloud_sync_ok = True
+        print("✅ 边缘节点已成功连接至云端 MQTT")
+    else:
+        cloud_sync_ok = False
+
+def on_mqtt_disconnect(client, userdata, rc, *args):
+    global cloud_sync_ok
+    cloud_sync_ok = False
+    print("⚠ 云端连接断开，进入边缘自治模式")
+
+mqtt_client.on_connect = on_mqtt_connect
+mqtt_client.on_disconnect = on_mqtt_disconnect
+
+try:
+    # 异步连接，绝不阻塞本地边缘计算服务
+    mqtt_client.connect_async(CLOUD_MQTT_IP, 1883, 60)
+    mqtt_client.loop_start()
+except Exception as e:
+    print(f"MQTT 初始化连接失败: {e}")
+# ---------------------------
+
 try:
     from llama_cpp import Llama
     LLM_AVAILABLE = True
@@ -25,17 +59,13 @@ except Exception as e:
     LLM_AVAILABLE = False
     print(f"⚠️ 警告: llama_cpp 初始化失败: {e}。本地 LLM 功能将不可用。")
 
-# LLM 全局对象
 llm_model = None
 LLM_MODEL_PATH = os.path.join(os.path.dirname(__file__), 'models', 'qwen2.5-0.5b-instruct-q4_k_m.gguf')
 
 def get_llm():
-    """延迟加载模型，节省内存并避免阻塞启动"""
     global llm_model
     if llm_model is None and LLM_AVAILABLE and os.path.exists(LLM_MODEL_PATH):
         print("🤖 正在加载 Qwen 模型到内存，请稍候...")
-        # n_ctx=512 限制上下文长度以节省 4GB RAM
-        # n_threads=4 榨干树莓派的 4 核 CPU
         llm_model = Llama(
             model_path=LLM_MODEL_PATH, 
             n_ctx=512, 
@@ -45,9 +75,8 @@ def get_llm():
         print("✅ Qwen 模型加载完成！")
     return llm_model
 
-# --- 摄像头相关代码 ---
 PI_CAMERA_AVAILABLE = False
-picam2 = None # 全局摄像头对象
+picam2 = None
 try:
     from picamera2 import Picamera2
     picam2 = Picamera2()
@@ -56,15 +85,12 @@ try:
 except Exception as e:
     print(f"⚠️ 警告: picamera2 初始化失败: {e}。拍照/视觉功能将不可用。")
 
-# 数据库集成
 try:
     from . import db as db
 except Exception:
     import db
 
-# --- 全局变量 ---
 data_lock = threading.Lock()
-# --- 修改点: 增加 gesture 字段 ---
 latest_data = { "temperature": None, "humidity": None, "lux": None, "soil": None, "gesture": None, "timestamp": None }
 db.create_tables()
 DB_DEVICE_ID = db.ensure_default_device()
@@ -77,7 +103,6 @@ ADMIN_TOKEN = os.environ.get('ADMIN_TOKEN', 'saffron-admin')
 ser = None
 auto_irrigation_state = { "watering": False, "last_start_ts": None, "last_end_ts": None }
 
-# 摄像头照片及分析结果保存目录
 CAPTURES_DIR = os.path.join(os.path.dirname(__file__), 'static', 'captures')
 if not os.path.exists(CAPTURES_DIR):
     os.makedirs(CAPTURES_DIR)
@@ -85,7 +110,6 @@ ANALYSIS_DIR = os.path.join(os.path.dirname(__file__), 'static', 'analysis')
 if not os.path.exists(ANALYSIS_DIR):
     os.makedirs(ANALYSIS_DIR)
 
-# --- 辅助函数和后台线程 ---
 def _get_bearer_token():
     auth = request.headers.get('Authorization', '')
     if auth.startswith('Bearer '): return auth[len('Bearer '):].strip()
@@ -123,8 +147,8 @@ def admin_required(fn):
         return fn(*args, **kwargs)
     wrapper.__name__ = fn.__name__
     return wrapper
+
 def serial_reader():
-    """后台线程，负责读取串口数据并更新 latest_data。"""
     global latest_data, ser
     serial_port = '/dev/ttyACM0'
     baud_rate = 115200
@@ -146,18 +170,29 @@ def serial_reader():
                                 latest_data['humidity'] = data.get('humi')
                                 latest_data['lux'] = data.get('lux')
                                 latest_data['soil'] = data.get('soil')
-                                # --- 修改点: 增加手势数据更新 ---
                                 latest_data['gesture'] = data.get('gesture')
                                 latest_data['timestamp'] = ts
-                            try:
-                                # 注意: sensor_data 表没有 gesture 字段, 这里不存入数据库
-                                db.insert_sensor_data(DB_DEVICE_ID, data.get('temp'), data.get('humi'), data.get('lux'), data.get('soil'), ts)
-                                db.update_device_last_seen(DB_DEVICE_ID)
-                            except Exception: pass
+                                
+                                # 存入本地数据库
+                                try:
+                                    db.insert_sensor_data(DB_DEVICE_ID, data.get('temp'), data.get('humi'), data.get('lux'), data.get('soil'), ts)
+                                    db.update_device_last_seen(DB_DEVICE_ID)
+                                    
+                                    # --- 新增: 实时触发云端同步 ---
+                                    if cloud_sync_ok:
+                                        payload = latest_data.copy()
+                                        payload['device_id'] = DB_DEVICE_ID
+                                        try:
+                                            mqtt_client.publish(MQTT_TOPIC, json.dumps(payload))
+                                        except Exception:
+                                            pass
+                                    # ------------------------------
+                                except Exception: pass
                     except (UnicodeDecodeError, json.JSONDecodeError, KeyError): pass
         except serial.SerialException as e:
             print(f"后台线程: 串口错误 - {e}. 5秒后重试...")
             time.sleep(5)
+
 def irrigation_worker():
     global ser
     POLL_INTERVAL = 5
@@ -215,66 +250,38 @@ app = Flask(__name__)
 CORS(app)
 
 def analyze_flower_color(image_path):
-    """
-    使用OpenCV分析图片中的主要花色, 并返回结果 (已加入外接矩形画框功能)。
-    """
     try:
         image = cv2.imread(image_path)
-        # 转换到HSV颜色空间
         hsv_image = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
-
-        # 定义颜色范围 (H, S, V)
-        # 这些值可能需要根据您的实际光照和摄像头进行微调
         color_ranges = {
-            'red': ([0, 120, 70], [10, 255, 255]),      # 红色范围 (较低的H值)
-            'green': ([35, 80, 40], [85, 255, 255]),    # 绿色范围
-            'pink': ([140, 100, 100], [170, 255, 255])  # 粉色范围 (较高的H值)
+            'red': ([0, 120, 70], [10, 255, 255]),
+            'green': ([35, 80, 40], [85, 255, 255]),
+            'pink': ([140, 100, 100], [170, 255, 255])
         }
-
         scores = {}
         for color, (lower, upper) in color_ranges.items():
             lower_bound = np.array(lower)
             upper_bound = np.array(upper)
-            # 创建颜色掩码
             mask = cv2.inRange(hsv_image, lower_bound, upper_bound)
-            # 计算颜色面积
             scores[color] = cv2.countNonZero(mask)
 
-        # 找到得分最高的颜色
         if not any(scores.values()):
             detected_color = 'none'
         else:
             detected_color = max(scores, key=scores.get)
             
-        # ==========================================
-        # 新增画框逻辑：为识别到的主要颜色寻找轮廓并画框
-        # ==========================================
         if detected_color != 'none':
-            # 重新获取最高得分颜色的阈值并生成Mask
             lower, upper = color_ranges[detected_color]
             mask = cv2.inRange(hsv_image, np.array(lower), np.array(upper))
-            
-            # 寻找该颜色区域的轮廓 (RETR_EXTERNAL: 只检索最外围轮廓)
             contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-            
             if contours:
-                # 找到面积最大的轮廓（过滤掉零碎的颜色噪点）
                 largest_contour = max(contours, key=cv2.contourArea)
-                
-                # 面积阈值过滤：只有当色块面积大于 500 像素时才画框，避免给小噪点画框
                 if cv2.contourArea(largest_contour) > 500:
-                    # 获取该轮廓的外接正矩形坐标
                     x, y, w, h = cv2.boundingRect(largest_contour)
-                    
-                    # 在原图上绘制绿色矩形框 (BGR颜色为 (0, 255, 0)，线宽为 2)
                     cv2.rectangle(image, (x, y), (x + w, y + h), (0, 255, 0), 2)
-                    
-                    # 将识别到的颜色名称写在框的左上角附近 (防止文字出界，y坐标做了简单处理)
                     text_y = y - 10 if y - 10 > 10 else y + 20
                     cv2.putText(image, f"{detected_color}", (x, text_y), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 0), 2)
-        # ==========================================
         
-        # 映射到生长状态
         growth_stage_map = {
             'green': '花蕾期 (Budding Stage)',
             'pink': '盛开期 (Flowering Stage)',
@@ -283,11 +290,9 @@ def analyze_flower_color(image_path):
         }
         growth_stage = growth_stage_map.get(detected_color, '未知')
 
-        # 在图片左上角绘制总体结果用于全局展示
         cv2.putText(image, f"Color: {detected_color}", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
         cv2.putText(image, f"Stage: {growth_stage}", (10, 70), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
         
-        # 保存分析后的图片
         analysis_filename = 'analyzed_' + os.path.basename(image_path)
         analysis_filepath = os.path.join(ANALYSIS_DIR, analysis_filename)
         cv2.imwrite(analysis_filepath, image)
@@ -299,12 +304,10 @@ def analyze_flower_color(image_path):
             "scores": scores,
             "analysis_image_url": url_for('static', filename=f'analysis/{analysis_filename}', _external=False)
         }
-
     except Exception as e:
         print(f"❌ 视觉分析失败: {e}")
         return {"status": "error", "message": str(e)}
 
-# --- 路由 ---
 @app.route('/')
 def index(): return render_template('index.html')
 @app.route('/admin')
@@ -314,12 +317,8 @@ def history_page(): return render_template('history.html')
 @app.route('/login')
 def login_page(): return render_template('login.html')
 
-
-# --- API 路由 ---
-
 @app.route('/api/v1/camera/capture', methods=['POST'])
 def capture_photo():
-    """处理拍照请求，使用全局摄像头对象。"""
     if not PI_CAMERA_AVAILABLE or not picam2:
         return jsonify({"status": "error", "message": "摄像头模块不可用或未初始化。"}), 503
     try:
@@ -335,52 +334,35 @@ def capture_photo():
             "path": relative_path
         })
     except Exception as e:
-        print(f"❌ 拍照失败: {e}")
         return jsonify({"status": "error", "message": f"拍照失败: {e}"}), 500
 
 @app.route('/api/v1/vision/analyze', methods=['POST'])
 def analyze_vision():
-    """拍照并进行AI视觉分析"""
     if not PI_CAMERA_AVAILABLE or not picam2:
         return jsonify({"status": "error", "message": "摄像头模块不可用或未初始化。"}), 503
-
     try:
-        # 1. 拍照
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         filename = f"capture_for_analysis_{timestamp}.jpg"
         filepath = os.path.join(CAPTURES_DIR, filename)
         picam2.capture_file(filepath)
-        print(f"为AI分析拍摄照片: {filepath}")
-
-        # 2. 调用分析函数
         analysis_result = analyze_flower_color(filepath)
-
         return jsonify(analysis_result)
-
     except Exception as e:
-        print(f"❌ AI视觉分析流程出错: {e}")
         return jsonify({"status": "error", "message": f"AI分析流程出错: {e}"}), 500
 
 @app.route('/api/v1/assistant', methods=['POST'])
 def ai_assistant():
-    """结合当前传感器数据，调用 Qwen 模型给出建议"""
     if not LLM_AVAILABLE or not os.path.exists(LLM_MODEL_PATH):
         return jsonify({"status": "error", "message": "LLM未配置或模型文件不存在。"}), 503
-
     try:
-        # 获取最新的传感器数据作为上下文
-        with data_lock:
-            env_data = latest_data.copy()
-        
+        with data_lock: env_data = latest_data.copy()
         temp = env_data.get('temperature', '未知')
         humi = env_data.get('humidity', '未知')
         lux = env_data.get('lux', '未知')
         soil = env_data.get('soil', '未知')
-
         data = request.get_json() or {}
         user_msg = data.get('message', '请简短评估当前环境是否适合藏红花生长，并给出建议。')
 
-        # 按照 Qwen 的 ChatML 格式拼接 Prompt
         prompt = (
             f"<|im_start|>system\n"
             f"你是一个专业的藏红花种植AI助手。请根据以下当前环境数据回答问题，要求语言简明扼要，控制在100字以内。\n"
@@ -388,24 +370,13 @@ def ai_assistant():
             f"<|im_start|>user\n{user_msg}<|im_end|>\n"
             f"<|im_start|>assistant\n"
         )
-
         model = get_llm()
-        if not model:
-            return jsonify({"status": "error", "message": "模型加载失败。"}), 500
+        if not model: return jsonify({"status": "error", "message": "模型加载失败。"}), 500
 
-        # 推理生成 (注意：树莓派上生成可能需要 10-30 秒)
-        response = model(
-            prompt,
-            max_tokens=150,
-            stop=["<|im_end|>"],
-            echo=False
-        )
-        
+        response = model(prompt, max_tokens=150, stop=["<|im_end|>"], echo=False)
         answer = response['choices'][0]['text'].strip()
         return jsonify({"status": "success", "answer": answer})
-
     except Exception as e:
-        print(f"❌ AI 助手推理失败: {e}")
         return jsonify({"status": "error", "message": str(e)}), 500
 
 @app.route('/api/v1/control', methods=['POST'])
@@ -438,6 +409,7 @@ def control_device():
     except Exception: pass
     if success: return jsonify({"status": "success", "message": f"Command '{command}' sent."})
     else: return jsonify({"status": "error", "message": "Device not connected or busy."}), 503
+
 @app.route('/api/v1/auth/register', methods=['POST'])
 def register():
     payload = request.get_json(silent=True) or {}
@@ -452,6 +424,7 @@ def register():
     except Exception: pass
     token = issue_token(uid)
     return jsonify({"id": uid, "username": username, "roles": db.get_user_roles(uid), "token": token})
+
 @app.route('/api/v1/auth/login', methods=['POST'])
 def login():
     payload = request.get_json(silent=True) or {}
@@ -461,15 +434,20 @@ def login():
     if not user or not check_password_hash(user['password_hash'], password): return jsonify({"error":"invalid credentials"}), 401
     token = issue_token(user['id'])
     return jsonify({"token": token, "id": user['id'], "username": user['username'], "roles": db.get_user_roles(user['id'])})
+
 @app.route('/api/v1/auth/me', methods=['GET'])
 @auth_required
 def me():
     u = request.current_user
     return jsonify({"id": u['id'], "username": u['username'], "roles": u.get('roles', [])})
+
 @app.route('/api/v1/sensors/latest', methods=['GET'])
 def get_latest_sensor_data():
     with data_lock: data_to_return = latest_data.copy()
+    # --- 注入云端连接状态给 UI ---
+    data_to_return['cloud_ok'] = cloud_sync_ok
     return jsonify(data_to_return)
+
 @app.route('/api/v1/sensors/history', methods=['GET'])
 def get_sensor_history():
     def normalize_start_end(s: str | None, e: str | None):
@@ -488,12 +466,14 @@ def get_sensor_history():
     except Exception: return jsonify({"error": "invalid device_id"}), 400
     rows = db.query_sensor_history(device_id=device_id, start=start, end=end, limit=limit, offset=offset)
     return jsonify({"items": rows, "count": len(rows)})
+
 @app.route('/api/v1/policy/irrigation', methods=['GET'])
 def get_irrigation_policy_api():
     try: device_id = int(request.args.get('device_id')) if request.args.get('device_id') is not None else DB_DEVICE_ID
     except Exception: return jsonify({"error": "invalid device_id"}), 400
     row = db.get_irrigation_policy(device_id)
     return jsonify(row or {})
+
 @app.route('/api/v1/policy/irrigation', methods=['POST'])
 def set_irrigation_policy_api():
     payload = request.get_json(silent=True) or {}
@@ -517,8 +497,10 @@ def set_irrigation_policy_api():
     db.upsert_irrigation_policy(device_id, enabled_int, soil_v, dur_v, cd_v)
     row = db.get_irrigation_policy(device_id)
     return jsonify(row or {}), 200
+
 @app.route('/api/v1/policy/irrigation/status', methods=['GET'])
 def get_auto_irrigation_status(): return jsonify(auto_irrigation_state)
+
 @app.route('/api/v1/sensors/history.csv', methods=['GET'])
 def get_sensor_history_csv():
     def normalize_start_end(s: str | None, e: str | None):
@@ -542,6 +524,7 @@ def get_sensor_history_csv():
     for r in rows: writer.writerow([r.get('id'), r.get('device_id'), r.get('timestamp'), r.get('temperature'), r.get('humidity'), r.get('lux'), r.get('soil')])
     csv_data = output.getvalue()
     return Response(csv_data, mimetype='text/csv', headers={'Content-Disposition': 'attachment; filename="history.csv"'})
+
 @app.route('/api/v1/control/logs', methods=['GET'])
 def get_control_logs():
     try:
@@ -560,6 +543,7 @@ def get_control_logs():
     end = norm(request.args.get('end'), False)
     rows = db.query_control_logs_range(device_id=device_id, start=start, end=end, actuator=actuator, limit=limit, offset=offset)
     return jsonify({"items": rows, "count": len(rows)})
+
 @app.route('/api/v1/devices/status', methods=['GET'])
 def device_status():
     try: device_id = int(request.args.get('device_id')) if request.args.get('device_id') is not None else DB_DEVICE_ID
@@ -567,7 +551,6 @@ def device_status():
     row = db.query_device_status(device_id)
     if not row: return jsonify({"error": "device not found"}), 404
     return jsonify(row)
-
 
 if __name__ == '__main__':
     if PI_CAMERA_AVAILABLE and picam2:
