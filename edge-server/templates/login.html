@@ -3,38 +3,55 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>登录 - 藏红花培育系统</title>
+  <title>登录 - 藏红花智能培育系统</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
   <style>
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; margin:0; background:#f6f7fb; }
-    .wrap { max-width: 420px; margin: 12vh auto; background: #fff; border-radius: 12px; box-shadow: 0 10px 24px rgba(0,0,0,0.08); overflow: hidden; }
-    header { background: #6f42c1; color: #fff; padding: 16px 18px; font-size: 18px; }
-    main { padding: 18px; }
-    label { display:block; margin: 10px 0 6px; color:#555; }
-    input { width: 100%; box-sizing: border-box; padding:10px 12px; border:1px solid #ddd; border-radius:8px; font-size:14px; }
-    button { width: 100%; padding: 10px 12px; border: 0; border-radius: 8px; background: #6f42c1; color: #fff; font-size: 15px; margin-top: 14px; cursor: pointer; }
-    .muted { color: #777; font-size: 13px; margin-top: 10px; text-align:center; }
-    .row { display:flex; gap:10px; }
-    .alt { background:#5a32b0; }
-    a { color:#6f42c1; text-decoration:none; }
-    .nav { text-align:center; padding: 12px; font-size: 14px; background:#faf9ff; }
+    :root { --primary: #10b981; --primary-hover: #059669; --bg: #ecfdf5; --surface: #ffffff; --text: #1f2937; --text-muted: #6b7280; }
+    body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; margin: 0; background: linear-gradient(135deg, var(--bg) 0%, #d1fae5 100%); min-height: 100vh; display: flex; align-items: center; justify-content: center; color: var(--text); }
+    .wrap { width: 100%; max-width: 400px; background: var(--surface); border-radius: 16px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04); overflow: hidden; margin: 20px; }
+    header { padding: 32px 24px 16px; text-align: center; }
+    header h1 { margin: 0; font-size: 24px; color: var(--primary); font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 8px; }
+    header p { margin: 8px 0 0; color: var(--text-muted); font-size: 14px; }
+    main { padding: 0 24px 24px; }
+    .form-group { margin-bottom: 16px; }
+    label { display: block; margin-bottom: 6px; font-size: 14px; font-weight: 500; color: #374151; }
+    input { width: 100%; box-sizing: border-box; padding: 12px 16px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 15px; transition: all 0.2s; outline: none; background: #f9fafb; }
+    input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.2); background: #fff; }
+    .actions { display: flex; gap: 12px; margin-top: 24px; }
+    button { flex: 1; padding: 12px; border: none; border-radius: 8px; font-size: 15px; font-weight: 500; cursor: pointer; transition: all 0.2s; }
+    #btn-login { background: var(--primary); color: white; }
+    #btn-login:hover { background: var(--primary-hover); transform: translateY(-1px); }
+    #btn-register { background: #f3f4f6; color: var(--text); }
+    #btn-register:hover { background: #e5e7eb; transform: translateY(-1px); }
+    .msg { text-align: center; margin-top: 16px; font-size: 14px; color: #ef4444; min-height: 20px; }
+    .nav { text-align: center; padding: 16px; background: #f9fafb; border-top: 1px solid #f3f4f6; font-size: 14px; }
+    .nav a { color: var(--primary); text-decoration: none; font-weight: 500; transition: color 0.2s; }
+    .nav a:hover { color: var(--primary-hover); }
   </style>
 </head>
 <body>
   <div class="wrap">
-    <header>用户登录</header>
+    <header>
+      <h1>🌱 藏红花培育系统</h1>
+      <p>边缘智能监测与控制中枢</p>
+    </header>
     <main>
-      <label>用户名</label>
-      <input id="username" type="text" placeholder="首个注册用户将成为管理员" />
-      <label>密码</label>
-      <input id="password" type="password" placeholder="不少于 6 位建议" />
-      <div class="row">
-        <button id="btn-login">登录</button>
-        <button id="btn-register" class="alt">注册并登录</button>
+      <div class="form-group">
+        <label>用户名</label>
+        <input id="username" type="text" placeholder="首个注册用户将成为管理员" />
       </div>
-      <div id="msg" class="muted"></div>
+      <div class="form-group">
+        <label>密码</label>
+        <input id="password" type="password" placeholder="不少于 6 位建议" />
+      </div>
+      <div class="actions">
+        <button id="btn-login">登 录</button>
+        <button id="btn-register">注册并登录</button>
+      </div>
+      <div id="msg" class="msg"></div>
     </main>
     <div class="nav">
-      <a href="/">返回首页</a> · <a href="/admin">后台管理</a>
+      <a href="/">← 返回实时监控</a> &nbsp;·&nbsp; <a href="/admin">后台管理</a>
     </div>
   </div>
 
@@ -42,20 +59,20 @@
     async function doLoginRegister(url){
       const u = document.getElementById('username').value.trim();
       const p = document.getElementById('password').value;
-      const msg = document.getElementById('msg'); msg.textContent='...';
+      const msg = document.getElementById('msg'); msg.textContent='正在验证...';
       try{
         const r = await fetch(url, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({username:u, password:p})});
         const js = await r.json();
         if(!r.ok){ throw new Error(js.error||('HTTP '+r.status)); }
         if(!js.token){ throw new Error('未返回令牌'); }
         localStorage.setItem('auth_token', js.token);
-        msg.textContent='登录成功，正在跳转 ...';
-        location.href = '/admin';
-      }catch(e){ msg.textContent='错误: '+e.message; }
+        msg.style.color = 'var(--primary)';
+        msg.textContent='✅ 登录成功，正在跳转...';
+        setTimeout(() => location.href = '/admin', 500);
+      }catch(e){ msg.style.color = '#ef4444'; msg.textContent='错误: '+e.message; }
     }
     document.getElementById('btn-login').addEventListener('click', ()=>doLoginRegister('/api/v1/auth/login'));
     document.getElementById('btn-register').addEventListener('click', ()=>doLoginRegister('/api/v1/auth/register'));
   </script>
 </body>
 </html>
-

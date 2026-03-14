@@ -4,71 +4,107 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>后台管理 - 藏红花培育系统</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
   <style>
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; margin: 0; background: #f6f7fb; color: #333; }
-    header { background: #6f42c1; color: #fff; padding: 14px 18px; display:flex; align-items:center; justify-content:space-between; }
-    header a { color: #fff; text-decoration: none; margin-right: 12px; }
-    main { padding: 16px; max-width: 1100px; margin: 0 auto; }
-    .grid { display: grid; gap: 16px; grid-template-columns: 1fr; }
-    @media (min-width: 980px) { .grid { grid-template-columns: 1fr 1fr; } }
-    .card { background: #fff; border-radius: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.06); padding: 12px; }
-    .card h2 { margin: 6px 8px 12px; font-size: 18px; color: #6f42c1; }
-    label { display:inline-flex; align-items:center; gap:6px; margin: 6px 8px; }
-    input, button { padding: 8px 10px; font-size: 14px; }
-    table { width: 100%; border-collapse: collapse; }
-    th, td { border-bottom: 1px solid #eee; padding: 6px 8px; font-size: 13px; }
-    th { text-align:left; color:#555; }
-    .muted { color:#777; font-size:13px; }
-    .row { display:flex; gap:12px; flex-wrap:wrap; align-items:center; }
-    .ok { color: #2e7d32; }
-    .err { color: #c62828; }
+    :root { --primary: #8b5cf6; --bg: #f8fafc; --surface: #ffffff; --text: #1e293b; --border: #e2e8f0; }
+    body { font-family: 'Inter', sans-serif; margin: 0; background: var(--bg); color: var(--text); }
+    .navbar { background: var(--surface); color: var(--text); padding: 16px 24px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 10; box-shadow: 0 1px 2px rgba(0,0,0,0.05);}
+    .navbar h1 { margin: 0; font-size: 18px; font-weight: 600; display: flex; align-items: center; gap: 8px; color: var(--primary);}
+    .nav-links a { color: #64748b; text-decoration: none; margin-left: 16px; font-size: 14px; font-weight: 500; transition: color 0.2s;}
+    .nav-links a:hover { color: var(--primary); }
+    
+    main { padding: 24px; max-width: 1200px; margin: 0 auto; }
+    .auth-badge { display: inline-flex; background: #f1f5f9; padding: 6px 12px; border-radius: 20px; font-size: 13px; color: #475569; margin-bottom: 24px; border: 1px solid var(--border); }
+    
+    .grid { display: grid; gap: 24px; grid-template-columns: 1fr; }
+    @media (min-width: 980px) { .grid { grid-template-columns: 350px 1fr; } }
+    
+    .card { background: var(--surface); border-radius: 12px; border: 1px solid var(--border); box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); padding: 20px; }
+    .card h2 { margin: 0 0 20px; font-size: 16px; font-weight: 600; color: #334155; display: flex; align-items: center; gap: 8px;}
+    
+    .form-group { margin-bottom: 16px; }
+    .form-group label { display: block; font-size: 13px; font-weight: 500; color: #64748b; margin-bottom: 6px; }
+    input[type="number"], input[type="password"] { width: 100%; box-sizing: border-box; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: 'Inter'; font-size: 14px; outline: none; transition: border 0.2s; background: #f8fafc;}
+    input:focus { border-color: var(--primary); background: #fff;}
+    .checkbox-group { display: flex; align-items: center; gap: 8px; margin-bottom: 16px; font-weight: 500; font-size: 15px;}
+    .checkbox-group input { width: 18px; height: 18px; accent-color: var(--primary); }
+    
+    button { background: var(--primary); color: white; border: none; padding: 10px 16px; border-radius: 8px; font-weight: 500; cursor: pointer; transition: background 0.2s; width: 100%;}
+    button:hover { background: #7c3aed; }
+    .btn-secondary { background: #f1f5f9; color: #475569; width: auto; padding: 6px 12px; font-size: 13px;}
+    .btn-secondary:hover { background: #e2e8f0; }
+    
+    table { width: 100%; border-collapse: separate; border-spacing: 0; }
+    th, td { border-bottom: 1px solid var(--border); padding: 12px 16px; font-size: 14px; text-align: left;}
+    th { color: #64748b; font-weight: 500; background: #f8fafc; font-size: 13px; }
+    th:first-child { border-top-left-radius: 8px; } th:last-child { border-top-right-radius: 8px; }
+    tbody tr:hover { background: #f8fafc; }
+    
+    .ok { color: #10b981; background: #d1fae5; padding: 2px 8px; border-radius: 12px; font-size: 12px; font-weight: 500;}
+    .err { color: #ef4444; background: #fee2e2; padding: 2px 8px; border-radius: 12px; font-size: 12px; font-weight: 500;}
+    .msg { font-size: 13px; text-align: center; margin-top: 12px; min-height: 18px; color: #64748b;}
   </style>
 </head>
 <body>
-  <header>
-    <div>🛠️ 后台管理</div>
-    <nav>
-      <a href="/">返回实时</a>
-      <a href="/history">历史</a>
-    </nav>
+  <header class="navbar">
+    <h1>🛠️ 核心参数与系统审计</h1>
+    <div class="nav-links">
+      <a href="/">返回实时控制</a>
+      <a href="/history">历史图表</a>
+    </div>
   </header>
   <main>
-    <div class="muted" id="auth-info" style="margin:8px 0 14px 4px;">登录状态：检测中...</div>
+    <div class="auth-badge" id="auth-info">🔒 鉴权状态：检测中...</div>
 
     <div class="grid">
       <section class="card">
-        <h2>自动灌溉策略</h2>
-        <div class="row">
-          <label><input type="checkbox" id="en"> 启用</label>
-          <label>土壤阈值(%) <input id="th" type="number" min="0" max="100" step="0.1" style="width:100px"></label>
-          <label>浇水时长(s) <input id="sec" type="number" min="1" max="3600" step="1" style="width:100px"></label>
-          <label>最小间隔(s) <input id="cd" type="number" min="0" max="86400" step="1" style="width:110px"></label>
+        <h2>🤖 边缘自动化策略</h2>
+        <div class="checkbox-group">
+          <input type="checkbox" id="en">
+          <label for="en" style="margin:0; cursor:pointer;">允许边缘网关接管灌溉</label>
         </div>
-        <div class="row">
-          <label>Admin Token <input id="tok" type="password" placeholder="可选（或使用登录令牌）" style="width:160px"></label>
-          <button id="save">保存策略</button>
-          <span id="msg" class="muted"></span>
+        <div class="form-group">
+          <label>触发阈值：土壤湿度低于 (%)</label>
+          <input id="th" type="number" min="0" max="100" step="0.1">
         </div>
+        <div class="form-group">
+          <label>动作参数：单次浇水时长 (秒)</label>
+          <input id="sec" type="number" min="1" max="3600" step="1">
+        </div>
+        <div class="form-group">
+          <label>安全策略：最小冷却间隔 (秒)</label>
+          <input id="cd" type="number" min="0" max="86400" step="1">
+        </div>
+        <div class="form-group">
+          <label>特权放行 (Admin Token) *可选</label>
+          <input id="tok" type="password" placeholder="若未登录，可凭口令覆写">
+        </div>
+        <button id="save">部署策略至边缘节点</button>
+        <div id="msg" class="msg"></div>
       </section>
 
-      <section class="card">
-        <h2>最近控制日志</h2>
-        <div class="row">
-          <label>显示条数 <input id="limit" type="number" min="10" max="500" step="10" value="100" style="width:90px"></label>
-          <button id="reload">刷新</button>
+      <section class="card" style="display: flex; flex-direction: column;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+          <h2 style="margin:0;">📜 终端设备审计日志</h2>
+          <div style="display: flex; gap: 8px; align-items: center;">
+            <input id="limit" type="number" min="10" max="500" step="10" value="100" style="width: 70px; padding: 6px 10px;">
+            <button id="reload" class="btn-secondary">刷新列表</button>
+          </div>
         </div>
-        <div class="muted" id="status">就绪</div>
-        <div style="overflow:auto; max-height: 420px;">
+        
+        <div style="overflow:auto; max-height: 500px; border: 1px solid var(--border); border-radius: 8px; border-bottom: none;">
           <table>
-            <thead><tr><th>时间</th><th>执行器</th><th>动作</th><th>成功</th></tr></thead>
+            <thead><tr><th>下发时间</th><th>目标执行器</th><th>动作载荷</th><th>硬件反馈</th></tr></thead>
             <tbody id="logs"></tbody>
           </table>
         </div>
+        <div id="status" class="msg" style="text-align: right; margin-top: 12px;">日志拉取中...</div>
       </section>
     </div>
   </main>
 
   <script>
+    // 完全保留你的鉴权和 API 逻辑
     async function loadPolicy(){
       try{
         const r = await fetch('/api/v1/policy/irrigation');
@@ -77,7 +113,7 @@
         document.getElementById('th').value = p && p.soil_threshold_min!=null ? p.soil_threshold_min : '';
         document.getElementById('sec').value = p && p.watering_seconds!=null ? p.watering_seconds : '';
         document.getElementById('cd').value = p && p.cooldown_seconds!=null ? p.cooldown_seconds : '';
-      }catch(e){ document.getElementById('msg').textContent='加载策略失败'; }
+      }catch(e){ document.getElementById('msg').textContent='获取硬件策略失败'; }
     }
     async function savePolicy(){
       const enabled = document.getElementById('en').checked;
@@ -85,55 +121,53 @@
       const sec = parseInt(document.getElementById('sec').value,10);
       const cd = parseInt(document.getElementById('cd').value,10);
       const tok = (document.getElementById('tok').value||'').trim();
-      const msg = document.getElementById('msg'); msg.textContent='保存中...';
+      const msg = document.getElementById('msg'); msg.textContent='正在下发...';
       try{
         const headers = {'Content-Type':'application/json'};
         const t = localStorage.getItem('auth_token'); if (t) headers['Authorization'] = 'Bearer ' + t;
         if (tok) headers['X-Admin-Token'] = tok;
-        if (!t && !tok) { msg.textContent = '\u8bf7\u5148\u767b\u5f55\u6216\u586b\u5199 Admin Token'; return; }
+        if (!t && !tok) { msg.style.color='#ef4444'; msg.textContent = '操作被拒绝：无凭证'; return; }
         const payload = {enabled:enabled, soil_threshold_min:th, watering_seconds:sec, cooldown_seconds:cd};
-        if (tok) payload.admin_token = tok; // body 也带上，双保险
+        if (tok) payload.admin_token = tok; 
         const r = await fetch('/api/v1/policy/irrigation',{method:'POST', headers, body: JSON.stringify(payload)});
         const js = await r.json();
         if(!r.ok) throw new Error(js.error||'保存失败');
-        msg.textContent='已保存 ✔';
+        msg.style.color='#10b981'; msg.textContent='✅ 策略已成功烧录至边缘库';
         loadPolicy();
-      }catch(e){ msg.textContent='错误: '+e.message; }
+      }catch(e){ msg.style.color='#ef4444'; msg.textContent='❌ 错误: '+e.message; }
     }
 
     async function loadLogs(){
       const limit = Math.max(10, Math.min(500, parseInt(document.getElementById('limit').value||'100')));
-      const status = document.getElementById('status'); status.textContent='加载中...';
+      const status = document.getElementById('status'); status.textContent='拉取中...';
       try{
         const r = await fetch('/api/v1/control/logs?limit='+limit);
         if(!r.ok) throw new Error('HTTP '+r.status);
         const js = await r.json();
+        const items = js.items || [];
+        const tbody = document.getElementById('logs');
+        tbody.innerHTML = items.map(it=>`<tr><td>${it.created_at||''}</td><td>${it.actuator||''}</td><td style="font-family:monospace;">${it.action||''}</td><td>${it.success?'<span class=ok>执行成功</span>':'<span class=err>执行失败</span>'}</td></tr>`).join('');
+        status.textContent = `当前展示最新的 ${items.length} 条流水`;
+      }catch(e){ status.textContent='加载失败: '+e.message; }
+    }
+
     async function checkAuth(){
       const el = document.getElementById('auth-info');
       const t = localStorage.getItem('auth_token');
-      if(!t){ el.textContent='登录状态：未登录（可前往 /login 登录）'; return; }
+      if(!t){ el.innerHTML='<span style="color:#ef4444">⚠ 访客模式</span> (请前往 <a href="/login">/login</a> 登录获取写权限)'; return; }
       try{
         const r = await fetch('/api/v1/auth/me', {headers: {'Authorization': 'Bearer '+t}});
-        if(!r.ok){ el.textContent='登录状态：未登录或令牌失效（请重新登录）'; return; }
+        if(!r.ok){ el.innerHTML='<span style="color:#ef4444">❌ 凭证过期</span>，请重新登录'; return; }
         const js = await r.json();
-        el.textContent = `登录状态：${js.username}（角色：${(js.roles||[]).join(', ')||'无'}）`;
-      }catch(e){ el.textContent='登录状态：检测失败'; }
-    }
-
-        const items = js.items || [];
-        const tbody = document.getElementById('logs');
-        tbody.innerHTML = items.map(it=>`<tr><td>${it.created_at||''}</td><td>${it.actuator||''}</td><td>${it.action||''}</td><td>${it.success?'<span class=ok>是</span>':'<span class=err>否</span>'}</td></tr>`).join('');
-        status.textContent = `共 ${items.length} 条`;
-      }catch(e){ status.textContent='加载失败: '+e.message; }
+        el.innerHTML = `🛡️ 管理员在线：<b>${js.username}</b> (Role: ${(js.roles||[]).join(', ')||'User'})`;
+      }catch(e){ el.textContent='鉴权服务不可用'; }
     }
 
     document.getElementById('save').addEventListener('click', savePolicy);
     document.getElementById('reload').addEventListener('click', loadLogs);
     loadPolicy();
     checkAuth();
-
     loadLogs();
   </script>
 </body>
 </html>
-
