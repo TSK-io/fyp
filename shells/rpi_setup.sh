@@ -1,4 +1,4 @@
-sudo apt -y install python3-pip python3-numpy python3-opencv python3-picamera2 hx
+sudo apt -y install python3-pip python3-numpy python3-opencv python3-picamera2 hx build-essential cmake
 pip install mpremote --break-system-packages
 # 安装工具
 pip install huggingface_hub --break-system-packages
