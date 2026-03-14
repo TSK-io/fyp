@@ -16,6 +16,35 @@ from werkzeug.security import generate_password_hash, check_password_hash
 import cv2
 import numpy as np
 
+# --- 在原有导入(import cv2, numpy 等)的下方添加 ---
+try:
+    from llama_cpp import Llama
+    LLM_AVAILABLE = True
+    print("✅ llama_cpp 库加载成功。")
+except Exception as e:
+    LLM_AVAILABLE = False
+    print(f"⚠️ 警告: llama_cpp 初始化失败: {e}。本地 LLM 功能将不可用。")
+
+# LLM 全局对象
+llm_model = None
+LLM_MODEL_PATH = os.path.join(os.path.dirname(__file__), 'models', 'Qwen3.5-0.8B-Q4_K_M.gguf')
+
+def get_llm():
+    """延迟加载模型，节省内存并避免阻塞启动"""
+    global llm_model
+    if llm_model is None and LLM_AVAILABLE and os.path.exists(LLM_MODEL_PATH):
+        print("🤖 正在加载 Qwen 模型到内存，请稍候...")
+        # n_ctx=512 限制上下文长度以节省 4GB RAM
+        # n_threads=4 榨干树莓派的 4 核 CPU
+        llm_model = Llama(
+            model_path=LLM_MODEL_PATH, 
+            n_ctx=512, 
+            n_threads=4, 
+            verbose=False
+        )
+        print("✅ Qwen 模型加载完成！")
+    return llm_model
+
 # --- 摄像头相关代码 ---
 PI_CAMERA_AVAILABLE = False
 picam2 = None # 全局摄像头对象
@@ -303,6 +332,53 @@ def analyze_vision():
     except Exception as e:
         print(f"❌ AI视觉分析流程出错: {e}")
         return jsonify({"status": "error", "message": f"AI分析流程出错: {e}"}), 500
+
+@app.route('/api/v1/assistant', methods=['POST'])
+def ai_assistant():
+    """结合当前传感器数据，调用 Qwen 模型给出建议"""
+    if not LLM_AVAILABLE or not os.path.exists(LLM_MODEL_PATH):
+        return jsonify({"status": "error", "message": "LLM未配置或模型文件不存在。"}), 503
+
+    try:
+        # 获取最新的传感器数据作为上下文
+        with data_lock:
+            env_data = latest_data.copy()
+        
+        temp = env_data.get('temperature', '未知')
+        humi = env_data.get('humidity', '未知')
+        lux = env_data.get('lux', '未知')
+        soil = env_data.get('soil', '未知')
+
+        data = request.get_json() or {}
+        user_msg = data.get('message', '请简短评估当前环境是否适合藏红花生长，并给出建议。')
+
+        # 按照 Qwen 的 ChatML 格式拼接 Prompt
+        prompt = (
+            f"<|im_start|>system\n"
+            f"你是一个专业的藏红花种植AI助手。请根据以下当前环境数据回答问题，要求语言简明扼要，控制在100字以内。\n"
+            f"当前温度:{temp}℃, 湿度:{humi}%, 光照:{lux}lux, 土壤湿度:{soil}%。<|im_end|>\n"
+            f"<|im_start|>user\n{user_msg}<|im_end|>\n"
+            f"<|im_start|>assistant\n"
+        )
+
+        model = get_llm()
+        if not model:
+            return jsonify({"status": "error", "message": "模型加载失败。"}), 500
+
+        # 推理生成 (注意：树莓派上生成可能需要 10-30 秒)
+        response = model(
+            prompt,
+            max_tokens=150,
+            stop=["<|im_end|>"],
+            echo=False
+        )
+        
+        answer = response['choices'][0]['text'].strip()
+        return jsonify({"status": "success", "answer": answer})
+
+    except Exception as e:
+        print(f"❌ AI 助手推理失败: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
 
 @app.route('/api/v1/control', methods=['POST'])
 def control_device():

@@ -64,6 +64,14 @@
         </div>
         
         <div class="controls">
+            <h2>🧠 专家系统 (Edge AI)</h2>
+            <button id="ask-ai-btn" class="control-btn" style="background-color: #fd7e14;">咨询种植助手</button>
+            <div id="ai-response" style="margin-top: 15px; padding: 15px; background-color: #fff3cd; border-left: 4px solid #ffc107; border-radius: 8px; text-align: left; display: none;">
+                <strong>AI 建议:</strong> <span id="ai-text">分析中...</span>
+            </div>
+        </div>
+        
+        <div class="controls">
             <h2>自动灌溉策略</h2>
             <div style="display:flex; gap:10px; flex-wrap:wrap; justify-content:center; align-items:center;">
                 <label><input type="checkbox" id="policy-enabled"> 启用</label>
@@ -186,6 +194,34 @@
 
         fetchData();
         setInterval(fetchData, 1000);
+        const aiApiUrl = '/api/v1/assistant';
+        document.getElementById('ask-ai-btn').addEventListener('click', async () => {
+            const resDiv = document.getElementById('ai-response');
+            const textSpan = document.getElementById('ai-text');
+            const btn = document.getElementById('ask-ai-btn');
+            
+            resDiv.style.display = 'block';
+            textSpan.textContent = '正在读取当前环境并结合 Qwen 模型思考中... (树莓派算力有限，请耐心等待 10~30 秒) ⏳';
+            btn.disabled = true;
+
+            try {
+                const response = await fetch(aiApiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message: "请简短评估当前环境是否适合藏红花生长，并给出动作建议（比如是否需要浇水或开灯）。" })
+                });
+                const result = await response.json();
+                if (!response.ok || result.status !== 'success') {
+                    throw new Error(result.message || '大模型推理失败');
+                }
+                textSpan.innerHTML = result.answer.replace(/\n/g, '<br>'); // 保留换行符
+            } catch (error) {
+                console.error("AI 助手失败:", error);
+                textSpan.textContent = `❌ 请求失败: ${error.message}`;
+            } finally {
+                btn.disabled = false;
+            }
+        });
     </script>
 </body>
 </html>
