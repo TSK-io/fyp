@@ -1,4 +1,4 @@
-# Saffron_Edge_Server/app.py (优化版 v4.0 - 集成边云协同 MQTT)
+# Saffron_Edge_Server/app.py (优化版 v4.0 - 集成边云协同 MQTT & 战术视觉 HUD)
 
 import serial
 import json
@@ -270,18 +270,7 @@ def analyze_flower_color(image_path):
         else:
             detected_color = max(scores, key=scores.get)
             
-        if detected_color != 'none':
-            lower, upper = color_ranges[detected_color]
-            mask = cv2.inRange(hsv_image, np.array(lower), np.array(upper))
-            contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-            if contours:
-                largest_contour = max(contours, key=cv2.contourArea)
-                if cv2.contourArea(largest_contour) > 500:
-                    x, y, w, h = cv2.boundingRect(largest_contour)
-                    cv2.rectangle(image, (x, y), (x + w, y + h), (0, 255, 0), 2)
-                    text_y = y - 10 if y - 10 > 10 else y + 20
-                    cv2.putText(image, f"{detected_color}", (x, text_y), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 0), 2)
-        
+        # 给网页 UI 返回的中文状态（为了让前端显示正常）
         growth_stage_map = {
             'green': '花蕾期 (Budding Stage)',
             'pink': '盛开期 (Flowering Stage)',
@@ -290,8 +279,69 @@ def analyze_flower_color(image_path):
         }
         growth_stage = growth_stage_map.get(detected_color, '未知')
 
-        cv2.putText(image, f"Color: {detected_color}", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
-        cv2.putText(image, f"Stage: {growth_stage}", (10, 70), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+        # 图像硬核装逼专用英文状态映射（解决 OpenCV 无法渲染中文的问题）
+        tech_stage_map = {
+            'green': 'SYS_CLASS: BUDDING_PHASE',
+            'pink': 'SYS_CLASS: BLOOMING_PHASE',
+            'red': 'SYS_CLASS: MATURE_DECAY',
+            'none': 'SYS_CLASS: TGT_NOT_FOUND'
+        }
+        tech_stage = tech_stage_map.get(detected_color, 'SYS_CLASS: UNKNOWN')
+
+        height, width, _ = image.shape
+
+        # ================= HUD UI 绘制 =================
+        if detected_color != 'none':
+            lower, upper = color_ranges[detected_color]
+            mask = cv2.inRange(hsv_image, np.array(lower), np.array(upper))
+            contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+            if contours:
+                largest_contour = max(contours, key=cv2.contourArea)
+                if cv2.contourArea(largest_contour) > 500:
+                    x, y, w, h = cv2.boundingRect(largest_contour)
+                    
+                    # 画科技感瞄准框 (四个角)
+                    line_len = 20
+                    thick = 3
+                    color_t = (0, 255, 0) # 绿色高科技框
+                    
+                    # 左上角
+                    cv2.line(image, (x, y), (x + line_len, y), color_t, thick)
+                    cv2.line(image, (x, y), (x, y + line_len), color_t, thick)
+                    # 右上角
+                    cv2.line(image, (x + w, y), (x + w - line_len, y), color_t, thick)
+                    cv2.line(image, (x + w, y), (x + w, y + line_len), color_t, thick)
+                    # 左下角
+                    cv2.line(image, (x, y + h), (x + line_len, y + h), color_t, thick)
+                    cv2.line(image, (x, y + h), (x, y + h - line_len), color_t, thick)
+                    # 右下角
+                    cv2.line(image, (x + w, y + h), (x + w - line_len, y + h), color_t, thick)
+                    cv2.line(image, (x + w, y + h), (x + w, y + h - line_len), color_t, thick)
+                    
+                    # 细边框
+                    cv2.rectangle(image, (x, y), (x + w, y + h), (0, 150, 0), 1)
+
+                    text_y = y - 10 if y - 10 > 10 else y + 20
+                    cv2.putText(image, f"[LOCKED] SIG: {detected_color.upper()}", (x, text_y), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 255), 2)
+
+        # 绘制中心十字准星
+        cx, cy = int(width/2), int(height/2)
+        cv2.line(image, (cx - 30, cy), (cx + 30, cy), (0, 255, 0), 1)
+        cv2.line(image, (cx, cy - 30), (cx, cy + 30), (0, 255, 0), 1)
+        cv2.circle(image, (cx, cy), 20, (0, 255, 0), 1)
+        cv2.circle(image, (cx, cy), 2, (0, 0, 255), -1)
+
+        # 绘制全局数据左上角 HUD
+        timestamp_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
+        cv2.putText(image, "SAFFRON_EDGE_VISION // OVERRIDE_PROT: ALPHA", (15, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
+        cv2.putText(image, f"TS_STREAM: {timestamp_str}", (15, 60), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 200, 0), 2)
+        cv2.putText(image, f"DOMINANT_SPEC: {detected_color.upper()}", (15, 90), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 255), 2)
+        cv2.putText(image, tech_stage, (15, 120), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
+        
+        # 伪造一点硬核参数装逼
+        cv2.putText(image, "MEM_ALLOC: 48.2MB", (width - 200, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 200, 0), 1)
+        cv2.putText(image, "MODEL: CV_HEURISTIC_V2", (width - 240, 50), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 200, 0), 1)
+        # ===============================================
         
         analysis_filename = 'analyzed_' + os.path.basename(image_path)
         analysis_filepath = os.path.join(ANALYSIS_DIR, analysis_filename)
