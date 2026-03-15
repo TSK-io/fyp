@@ -1,0 +1,59 @@
+@startuml
+title 图2-1 边缘计算与农业物联网分层模型
+
+left to right direction
+skinparam backgroundColor white
+skinparam shadowing false
+skinparam defaultFontName Microsoft YaHei
+skinparam linetype ortho
+skinparam packageStyle rectangle
+
+skinparam package {
+  BorderColor #888888
+  FontColor #222222
+}
+
+skinparam rectangle {
+  BorderColor #888889
+  FontColor #222222
+  BackgroundColor white
+  RoundCorner 5
+}
+
+skinparam ArrowColor #666666
+
+package "感知层" #EAF4FD {
+  rectangle "环境传感器" as S
+  rectangle "摄像头" as CAM
+  rectangle "STM32控制节点" as MCU
+  rectangle "执行器" as ACT
+
+  S --> MCU
+  CAM --> MCU
+  MCU --> ACT
+}
+
+package "边缘层" #EEF7EE {
+  rectangle "树莓派边缘网关" as PI
+  rectangle "数据处理" as DATA
+  rectangle "自动控制" as AUTO
+  rectangle "Flask服务端" as FLASK
+  rectangle "SQLite数据库" as DB
+
+  PI --> DATA
+  DATA --> AUTO
+  DATA --> DB
+  FLASK --> DB
+}
+
+package "用户层" #FFF6DD {
+  rectangle "Web管理界面" as WEB
+  rectangle "用户终端" as USER
+
+  USER --> WEB
+}
+
+MCU --> PI : 串口
+AUTO --> MCU : 控制
+FLASK --> WEB : HTTP
+@enduml

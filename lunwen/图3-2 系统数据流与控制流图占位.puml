@@ -1,0 +1,31 @@
+@startuml
+title 图3-2 系统数据流与控制流图
+
+left to right direction
+skinparam backgroundColor white
+skinparam shadowing false
+skinparam defaultFontName Microsoft YaHei
+skinparam linetype ortho
+skinparam ArrowColor #666666
+skinparam rectangle {
+  BackgroundColor white
+  BorderColor #888888
+  FontColor #222222
+  RoundCorner 4
+}
+
+rectangle "传感器/执行器" as DEV
+rectangle "STM32控制节点" as MCU
+rectangle "树莓派边缘端" as EDGE
+rectangle "SQLite数据库" as DB
+rectangle "Web页面" as WEB
+rectangle "用户" as USER
+
+DEV <--> MCU
+MCU <--> EDGE
+EDGE --> DB
+
+USER --> WEB
+WEB <--> EDGE
+
+@enduml

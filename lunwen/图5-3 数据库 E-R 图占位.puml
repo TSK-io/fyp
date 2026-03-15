@@ -1,0 +1,77 @@
+@startuml
+title 图5-3 数据库 E-R 图
+
+left to right direction
+skinparam backgroundColor white
+skinparam shadowing false
+skinparam defaultFontName Microsoft YaHei
+skinparam linetype ortho
+skinparam ArrowColor #666666
+skinparam entity {
+  BackgroundColor white
+  BorderColor #888888
+  FontColor #222222
+}
+
+entity "用户表\n(users)" as users {
+  * id
+  --
+  username
+  password_hash
+  created_at
+}
+
+entity "角色表\n(roles)" as roles {
+  * id
+  --
+  name
+}
+
+entity "用户角色关联表\n(user_roles)" as user_roles {
+  * user_id
+  * role_id
+}
+
+entity "设备表\n(devices)" as devices {
+  * id
+  --
+  name
+  last_seen
+}
+
+entity "传感器数据表\n(sensor_data)" as sensor_data {
+  * id
+  --
+  device_id
+  temperature
+  humidity
+  lux
+  soil
+  timestamp
+}
+
+entity "控制日志表\n(control_logs)" as control_logs {
+  * id
+  --
+  device_id
+  actuator
+  action
+  created_at
+}
+
+entity "灌溉策略表\n(irrigation_policies)" as policies {
+  * id
+  --
+  device_id
+  soil_threshold_min
+  watering_seconds
+  cooldown_seconds
+}
+
+users ||--o{ user_roles
+roles ||--o{ user_roles
+devices ||--o{ sensor_data
+devices ||--o{ control_logs
+devices ||--o{ policies
+
+@enduml
