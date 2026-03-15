@@ -290,7 +290,7 @@ def analyze_flower_color(image_path):
 
         height, width, _ = image.shape
 
-        # ================= HUD UI 绘制 =================
+# ================= HUD UI 绘制 (超大字号专业分析版) =================
         if detected_color != 'none':
             lower, upper = color_ranges[detected_color]
             mask = cv2.inRange(hsv_image, np.array(lower), np.array(upper))
@@ -300,47 +300,40 @@ def analyze_flower_color(image_path):
                 if cv2.contourArea(largest_contour) > 500:
                     x, y, w, h = cv2.boundingRect(largest_contour)
                     
-                    # 画科技感瞄准框 (四个角)
-                    line_len = 20
-                    thick = 3
-                    color_t = (0, 255, 0) # 绿色高科技框
+                    # 画科技感分析框 (四个角拉长加粗)
+                    line_len = 50 
+                    thick = 6     
+                    color_t = (0, 255, 0) 
                     
-                    # 左上角
+                    # 左上、右上、左下、右下
                     cv2.line(image, (x, y), (x + line_len, y), color_t, thick)
                     cv2.line(image, (x, y), (x, y + line_len), color_t, thick)
-                    # 右上角
                     cv2.line(image, (x + w, y), (x + w - line_len, y), color_t, thick)
                     cv2.line(image, (x + w, y), (x + w, y + line_len), color_t, thick)
-                    # 左下角
                     cv2.line(image, (x, y + h), (x + line_len, y + h), color_t, thick)
                     cv2.line(image, (x, y + h), (x, y + h - line_len), color_t, thick)
-                    # 右下角
                     cv2.line(image, (x + w, y + h), (x + w - line_len, y + h), color_t, thick)
                     cv2.line(image, (x + w, y + h), (x + w, y + h - line_len), color_t, thick)
                     
-                    # 细边框
-                    cv2.rectangle(image, (x, y), (x + w, y + h), (0, 150, 0), 1)
+                    # 细边框 (稍微加粗)
+                    cv2.rectangle(image, (x, y), (x + w, y + h), (0, 150, 0), 3)
 
-                    text_y = y - 10 if y - 10 > 10 else y + 20
-                    cv2.putText(image, f"[LOCKED] SIG: {detected_color.upper()}", (x, text_y), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 255), 2)
+                    # 目标锁定文字 (超大号，使用更专业的 TARGET 标识)
+                    text_y = y - 25 if y - 25 > 40 else y + 50
+                    cv2.putText(image, f"TARGET: {detected_color.upper()}", (x, text_y), cv2.FONT_HERSHEY_SIMPLEX, 2.5, (0, 255, 255), 5)
 
-        # 绘制中心十字准星
-        cx, cy = int(width/2), int(height/2)
-        cv2.line(image, (cx - 30, cy), (cx + 30, cy), (0, 255, 0), 1)
-        cv2.line(image, (cx, cy - 30), (cx, cy + 30), (0, 255, 0), 1)
-        cv2.circle(image, (cx, cy), 20, (0, 255, 0), 1)
-        cv2.circle(image, (cx, cy), 2, (0, 0, 255), -1)
+        # (已彻底移除中心准星代码)
 
-        # 绘制全局数据左上角 HUD
+        # 绘制全局数据左上角 HUD (超大字号，间距大幅度拉开)
         timestamp_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
-        cv2.putText(image, "SAFFRON_EDGE_VISION // OVERRIDE_PROT: ALPHA", (15, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
-        cv2.putText(image, f"TS_STREAM: {timestamp_str}", (15, 60), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 200, 0), 2)
-        cv2.putText(image, f"DOMINANT_SPEC: {detected_color.upper()}", (15, 90), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 255), 2)
-        cv2.putText(image, tech_stage, (15, 120), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
+        cv2.putText(image, "SAFFRON_EDGE_VISION // OVERRIDE: ALPHA", (30, 80), cv2.FONT_HERSHEY_SIMPLEX, 2.0, (0, 255, 0), 4)
+        cv2.putText(image, f"TS_STREAM: {timestamp_str}", (30, 160), cv2.FONT_HERSHEY_SIMPLEX, 1.8, (0, 200, 0), 4)
+        cv2.putText(image, f"DOMINANT_SPEC: {detected_color.upper()}", (30, 240), cv2.FONT_HERSHEY_SIMPLEX, 2.5, (0, 255, 255), 5)
+        cv2.putText(image, tech_stage, (30, 320), cv2.FONT_HERSHEY_SIMPLEX, 3.0, (0, 255, 0), 7) # 核心状态最大最粗
         
-        # 伪造一点硬核参数装逼
-        cv2.putText(image, "MEM_ALLOC: 48.2MB", (width - 200, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 200, 0), 1)
-        cv2.putText(image, "MODEL: CV_HEURISTIC_V2", (width - 240, 50), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 200, 0), 1)
+        # 右上角伪造参数 (超大字号，坐标左移防止出界)
+        cv2.putText(image, "MEM_ALLOC: 48.2MB", (width - 650, 80), cv2.FONT_HERSHEY_SIMPLEX, 1.8, (0, 200, 0), 4)
+        cv2.putText(image, "MODEL: CV_HEURISTIC_V2", (width - 850, 160), cv2.FONT_HERSHEY_SIMPLEX, 1.8, (0, 200, 0), 4)
         # ===============================================
         
         analysis_filename = 'analyzed_' + os.path.basename(image_path)
