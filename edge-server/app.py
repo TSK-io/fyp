@@ -216,7 +216,7 @@ CORS(app)
 
 def analyze_flower_color(image_path):
     """
-    使用OpenCV分析图片中的主要花色, 并返回结果。
+    使用OpenCV分析图片中的主要花色, 并返回结果 (已加入外接矩形画框功能)。
     """
     try:
         image = cv2.imread(image_path)
@@ -228,7 +228,7 @@ def analyze_flower_color(image_path):
         color_ranges = {
             'red': ([0, 120, 70], [10, 255, 255]),      # 红色范围 (较低的H值)
             'green': ([35, 80, 40], [85, 255, 255]),    # 绿色范围
-            'pink': ([140, 100, 100], [170, 255, 255]) # 粉色范围 (较高的H值)
+            'pink': ([140, 100, 100], [170, 255, 255])  # 粉色范围 (较高的H值)
         }
 
         scores = {}
@@ -245,6 +245,34 @@ def analyze_flower_color(image_path):
             detected_color = 'none'
         else:
             detected_color = max(scores, key=scores.get)
+            
+        # ==========================================
+        # 新增画框逻辑：为识别到的主要颜色寻找轮廓并画框
+        # ==========================================
+        if detected_color != 'none':
+            # 重新获取最高得分颜色的阈值并生成Mask
+            lower, upper = color_ranges[detected_color]
+            mask = cv2.inRange(hsv_image, np.array(lower), np.array(upper))
+            
+            # 寻找该颜色区域的轮廓 (RETR_EXTERNAL: 只检索最外围轮廓)
+            contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+            
+            if contours:
+                # 找到面积最大的轮廓（过滤掉零碎的颜色噪点）
+                largest_contour = max(contours, key=cv2.contourArea)
+                
+                # 面积阈值过滤：只有当色块面积大于 500 像素时才画框，避免给小噪点画框
+                if cv2.contourArea(largest_contour) > 500:
+                    # 获取该轮廓的外接正矩形坐标
+                    x, y, w, h = cv2.boundingRect(largest_contour)
+                    
+                    # 在原图上绘制绿色矩形框 (BGR颜色为 (0, 255, 0)，线宽为 2)
+                    cv2.rectangle(image, (x, y), (x + w, y + h), (0, 255, 0), 2)
+                    
+                    # 将识别到的颜色名称写在框的左上角附近 (防止文字出界，y坐标做了简单处理)
+                    text_y = y - 10 if y - 10 > 10 else y + 20
+                    cv2.putText(image, f"{detected_color}", (x, text_y), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 0), 2)
+        # ==========================================
         
         # 映射到生长状态
         growth_stage_map = {
@@ -255,7 +283,7 @@ def analyze_flower_color(image_path):
         }
         growth_stage = growth_stage_map.get(detected_color, '未知')
 
-        # 在图片上绘制结果用于展示
+        # 在图片左上角绘制总体结果用于全局展示
         cv2.putText(image, f"Color: {detected_color}", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
         cv2.putText(image, f"Stage: {growth_stage}", (10, 70), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
         
