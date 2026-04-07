@@ -32,7 +32,7 @@
 <body>
   <div class="wrap">
     <header>
-      <h1>🌱 藏红花培育系统</h1>
+      <h1>藏红花培育系统</h1>
       <p>边缘智能监测与控制中枢</p>
     </header>
     <main>
@@ -67,7 +67,7 @@
         if(!js.token){ throw new Error('未返回令牌'); }
         localStorage.setItem('auth_token', js.token);
         msg.style.color = 'var(--primary)';
-        msg.textContent='✅ 登录成功，正在跳转...';
+        msg.textContent='登录成功，正在跳转...';
         setTimeout(() => location.href = '/admin', 500);
       }catch(e){ msg.style.color = '#ef4444'; msg.textContent='错误: '+e.message; }
     }

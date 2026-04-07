@@ -32,12 +32,12 @@ def init_db():
 
 # --- MQTT 回调函数 ---
 def on_connect(client, userdata, flags, rc):
-    print("✅ 成功连接到 MQTT Broker, 状态码:", rc)
+    print("成功连接到 MQTT Broker, 状态码:", rc)
     client.subscribe("saffron/telemetry") # 订阅主题
 
 def on_message(client, userdata, msg):
     payload = msg.payload.decode('utf-8')
-    print(f"📥 收到数据: {payload}")
+    print(f"收到数据: {payload}")
     try:
         data = json.loads(payload)
         conn = pymysql.connect(**DB_CONFIG)
@@ -57,7 +57,7 @@ def on_message(client, userdata, msg):
         conn.commit()
         conn.close()
     except Exception as e:
-        print(f"❌ 数据写入 MySQL 失败: {e}")
+        print(f"数据写入 MySQL 失败: {e}")
 
 # --- 主程序 ---
 init_db()

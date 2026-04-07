@@ -38,7 +38,7 @@ end
 # === 注入 DNS ===
 sudo cp /etc/resolv.conf $MNT_DIR/etc/resolv.conf
 
-echo "✅ 挂载完成"
+echo "挂载完成"
 ```
 
 ## 3. 网络配置注入 (Network Injection)
@@ -74,7 +74,7 @@ method=auto
 sudo chmod 600 $MNT_DIR/etc/NetworkManager/system-connections/PixelHotspot.nmconnection
 sudo chown root:root $MNT_DIR/etc/NetworkManager/system-connections/PixelHotspot.nmconnection
 
-echo "✅ WiFi 配置注入完成 (SSID: li)"
+echo "WiFi 配置注入完成 (SSID: li)"
 ```
 
 ## 4. 系统配置 (System Config via Chroot)
@@ -109,7 +109,7 @@ echo "REGDOMAIN=CN" > /etc/default/crda
 # === 执行注入 ===
 sudo chroot $MNT_DIR /bin/bash -c "$SETUP_SCRIPT"
 
-echo "✅ 用户 pi (密码: 11) 已创建，SSH 已强制开启"
+echo "用户 pi (密码: 11) 已创建，SSH 已强制开启"
 ```
 
 ## 5. 清理与卸载 (Unmount)
@@ -122,5 +122,5 @@ for dir in dev/pts dev sys proc
 end
 sudo umount $MNT_DIR
 
-echo "🎉 完成。请拔卡上电。"
+echo "完成。请拔卡上电。"
 ```

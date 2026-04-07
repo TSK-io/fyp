@@ -1,4 +1,4 @@
-# 🌱 基于边缘计算的藏红花智能培育系统
+# 基于边缘计算的藏红花智能培育系统
 # Saffron Intelligent Cultivation System
 
 [![License](https://img.shields.io/badge/License-BSD%203--Clause-blue.svg)](LICENSE)
@@ -9,7 +9,7 @@
 
 ---
 
-## 🚀 安装与部署指南
+## 安装与部署指南
 
 ### 1. 硬件连接
 确保 STM32 通过 USB 线连接到树莓派的 USB 口（作为虚拟串口 `/dev/ttyACM0` 供电及通信）。
@@ -65,7 +65,7 @@ chmod +x setup.sh
 
 ---
 
-## ❓ 常见问题排查 (Troubleshooting)
+## 常见问题排查 (Troubleshooting)
 
 **Q: 报错 `ValueError: numpy.dtype size changed`?**
 *   **A:** 这是因为 `pip` 安装的新版 `numpy` (2.x) 与树莓派系统自带的 `picamera2` 不兼容。解决方法：

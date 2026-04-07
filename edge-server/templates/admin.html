@@ -47,18 +47,18 @@
 </head>
 <body>
   <header class="navbar">
-    <h1>🛠️ 核心参数与系统审计</h1>
+    <h1>核心参数与系统审计</h1>
     <div class="nav-links">
       <a href="/">返回实时控制</a>
       <a href="/history">历史图表</a>
     </div>
   </header>
   <main>
-    <div class="auth-badge" id="auth-info">🔒 鉴权状态：检测中...</div>
+    <div class="auth-badge" id="auth-info">鉴权状态：检测中...</div>
 
     <div class="grid">
       <section class="card">
-        <h2>🤖 边缘自动化策略</h2>
+        <h2>边缘自动化策略</h2>
         <div class="checkbox-group">
           <input type="checkbox" id="en">
           <label for="en" style="margin:0; cursor:pointer;">允许边缘网关接管灌溉</label>
@@ -85,7 +85,7 @@
 
       <section class="card" style="display: flex; flex-direction: column;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-          <h2 style="margin:0;">📜 终端设备审计日志</h2>
+          <h2 style="margin:0;">终端设备审计日志</h2>
           <div style="display: flex; gap: 8px; align-items: center;">
             <input id="limit" type="number" min="10" max="500" step="10" value="100" style="width: 70px; padding: 6px 10px;">
             <button id="reload" class="btn-secondary">刷新列表</button>
@@ -132,9 +132,9 @@
         const r = await fetch('/api/v1/policy/irrigation',{method:'POST', headers, body: JSON.stringify(payload)});
         const js = await r.json();
         if(!r.ok) throw new Error(js.error||'保存失败');
-        msg.style.color='#10b981'; msg.textContent='✅ 策略已成功烧录至边缘库';
+        msg.style.color='#10b981'; msg.textContent='策略已成功烧录至边缘库';
         loadPolicy();
-      }catch(e){ msg.style.color='#ef4444'; msg.textContent='❌ 错误: '+e.message; }
+      }catch(e){ msg.style.color='#ef4444'; msg.textContent='错误: '+e.message; }
     }
 
     async function loadLogs(){
@@ -154,12 +154,12 @@
     async function checkAuth(){
       const el = document.getElementById('auth-info');
       const t = localStorage.getItem('auth_token');
-      if(!t){ el.innerHTML='<span style="color:#ef4444">⚠ 访客模式</span> (请前往 <a href="/login">/login</a> 登录获取写权限)'; return; }
+      if(!t){ el.innerHTML='<span style="color:#ef4444">访客模式</span> (请前往 <a href="/login">/login</a> 登录获取写权限)'; return; }
       try{
         const r = await fetch('/api/v1/auth/me', {headers: {'Authorization': 'Bearer '+t}});
-        if(!r.ok){ el.innerHTML='<span style="color:#ef4444">❌ 凭证过期</span>，请重新登录'; return; }
+        if(!r.ok){ el.innerHTML='<span style="color:#ef4444">凭证过期</span>，请重新登录'; return; }
         const js = await r.json();
-        el.innerHTML = `🛡️ 管理员在线：<b>${js.username}</b> (Role: ${(js.roles||[]).join(', ')||'User'})`;
+        el.innerHTML = `管理员在线：<b>${js.username}</b> (Role: ${(js.roles||[]).join(', ')||'User'})`;
       }catch(e){ el.textContent='鉴权服务不可用'; }
     }
 

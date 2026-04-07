@@ -139,7 +139,7 @@ class PAJ7620:
         # REG 0x42(Bank0): Gesture detection mask, 0x01=enable wave
         self._write_reg(0x42, 0x01)
         
-        print("✅ PAJ7620 传感器初始化成功! (v2固件)")
+        print("PAJ7620 传感器初始化成功! (v2固件)")
         return True
 
     def get_gesture_code(self):

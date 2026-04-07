@@ -119,11 +119,11 @@ class SensorBase:
     
     def _log_error(self, message):
         """记录错误日志"""
-        print(f"[{self.sensor_type}] ❌ {message}")
+        print(f"[{self.sensor_type}] {message}")
     
     def _log_success(self, message):
         """记录成功日志"""
-        print(f"[{self.sensor_type}] ✅ {message}")
+        print(f"[{self.sensor_type}] {message}")
     
     def __str__(self):
         """字符串表示"""

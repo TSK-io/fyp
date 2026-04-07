@@ -31,14 +31,14 @@ def on_mqtt_connect(client, userdata, flags, rc, *args):
     global cloud_sync_ok
     if rc == 0:
         cloud_sync_ok = True
-        print("✅ 边缘节点已成功连接至云端 MQTT")
+        print("边缘节点已成功连接至云端 MQTT")
     else:
         cloud_sync_ok = False
 
 def on_mqtt_disconnect(client, userdata, rc, *args):
     global cloud_sync_ok
     cloud_sync_ok = False
-    print("⚠ 云端连接断开，进入边缘自治模式")
+    print("警告: 云端连接断开，进入边缘自治模式")
 
 mqtt_client.on_connect = on_mqtt_connect
 mqtt_client.on_disconnect = on_mqtt_disconnect
@@ -54,10 +54,10 @@ except Exception as e:
 try:
     from llama_cpp import Llama
     LLM_AVAILABLE = True
-    print("✅ llama_cpp 库加载成功。")
+    print("llama_cpp 库加载成功。")
 except Exception as e:
     LLM_AVAILABLE = False
-    print(f"⚠️ 警告: llama_cpp 初始化失败: {e}。本地 LLM 功能将不可用。")
+    print(f"警告: llama_cpp 初始化失败: {e}。本地 LLM 功能将不可用。")
 
 llm_model = None
 LLM_MODEL_PATH = os.path.join(os.path.dirname(__file__), 'models', 'qwen2.5-0.5b-instruct-q4_k_m.gguf')
@@ -65,14 +65,14 @@ LLM_MODEL_PATH = os.path.join(os.path.dirname(__file__), 'models', 'qwen2.5-0.5b
 def get_llm():
     global llm_model
     if llm_model is None and LLM_AVAILABLE and os.path.exists(LLM_MODEL_PATH):
-        print("🤖 正在加载 Qwen 模型到内存，请稍候...")
+        print("正在加载 Qwen 模型到内存，请稍候...")
         llm_model = Llama(
             model_path=LLM_MODEL_PATH, 
             n_ctx=512, 
             n_threads=4, 
             verbose=False
         )
-        print("✅ Qwen 模型加载完成！")
+        print("Qwen 模型加载完成！")
     return llm_model
 
 PI_CAMERA_AVAILABLE = False
@@ -81,9 +81,9 @@ try:
     from picamera2 import Picamera2
     picam2 = Picamera2()
     PI_CAMERA_AVAILABLE = True
-    print("✅ picamera2 库加载成功，摄像头对象已创建。")
+    print("picamera2 库加载成功，摄像头对象已创建。")
 except Exception as e:
-    print(f"⚠️ 警告: picamera2 初始化失败: {e}。拍照/视觉功能将不可用。")
+    print(f"警告: picamera2 初始化失败: {e}。拍照/视觉功能将不可用。")
 
 try:
     from . import db as db
@@ -348,7 +348,7 @@ def analyze_flower_color(image_path):
             "analysis_image_url": url_for('static', filename=f'analysis/{analysis_filename}', _external=False)
         }
     except Exception as e:
-        print(f"❌ 视觉分析失败: {e}")
+        print(f"视觉分析失败: {e}")
         return {"status": "error", "message": str(e)}
 
 @app.route('/')
@@ -601,9 +601,9 @@ if __name__ == '__main__':
             still_config = picam2.create_still_configuration()
             picam2.configure(still_config)
             picam2.start()
-            print("✅ 摄像头已成功启动并准备就绪。")
+            print("摄像头已成功启动并准备就绪。")
         except Exception as e:
-            print(f"❌ 启动摄像头失败: {e}")
+            print(f"启动摄像头失败: {e}")
             PI_CAMERA_AVAILABLE = False
     
     reader_thread = threading.Thread(target=serial_reader, daemon=True)

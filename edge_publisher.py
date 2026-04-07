@@ -19,10 +19,10 @@ def connect_mqtt():
             print(f"尝试连接云端 MQTT Broker ({CLOUD_MQTT_IP})...")
             client.connect(CLOUD_MQTT_IP, 1883, 60)
             client.loop_start() 
-            print("✅ 连接云端成功！")
+            print("连接云端成功！")
             break
         except Exception as e:
-            print(f"❌ 连接失败，5秒后重试... ({e})")
+            print(f"连接失败，5秒后重试... ({e})")
             time.sleep(5)
 
 def sync_data():
@@ -39,7 +39,7 @@ def sync_data():
     except Exception:
         pass
 
-    print(f"🚀 开始同步数据上云... (起始 ID: {last_sent_id})")
+    print(f"开始同步数据上云... (起始 ID: {last_sent_id})")
 
     while True:
         try:
@@ -54,7 +54,7 @@ def sync_data():
                 data = dict(row)
                 payload = json.dumps(data)
                 client.publish(TOPIC, payload)
-                print(f"📤 已发送: {payload}")
+                print(f"已发送: {payload}")
                 last_sent_id = data['id']
                 time.sleep(0.1)
             

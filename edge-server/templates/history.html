@@ -35,7 +35,7 @@
 </head>
 <body>
   <header class="navbar">
-    <h1>📈 环境时序数据追溯</h1>
+    <h1>环境时序数据追溯</h1>
     <div class="nav-links">
       <a href="/">← 返回实时界面</a>
       <a href="/admin">后台管理</a>
@@ -54,18 +54,18 @@
         <label>拉取条数</label>
         <input id="limit" type="number" min="10" max="1000" step="10" value="200" style="width: 80px;" />
       </div>
-      <button id="load">🔄 立即查询</button>
-      <button id="export">📥 导出 CSV</button>
+      <button id="load">立即查询</button>
+      <button id="export">导出 CSV</button>
       <span id="status">系统就绪</span>
     </div>
 
     <div class="grid">
       <div class="chart-card">
-        <h3>🌡️ 温湿度交变趋势</h3>
+        <h3>温湿度交变趋势</h3>
         <div id="chart-th" style="height: 380px;"></div>
       </div>
       <div class="chart-card">
-        <h3>☀️ 光照与土壤水分趋势</h3>
+        <h3>光照与土壤水分趋势</h3>
         <div id="chart-ls" style="height: 380px;"></div>
       </div>
     </div>
@@ -87,7 +87,7 @@
       const qs = new URLSearchParams();
       if (s) qs.set('start', s); if (e) qs.set('end', e); qs.set('limit', String(limit));
 
-      el('status').textContent = '📡 数据云端拉取中...';
+      el('status').textContent = '数据云端拉取中...';
       try {
         const resp = await fetch(`${api.history}?${qs.toString()}`);
         if (!resp.ok) throw new Error('HTTP ' + resp.status);
@@ -155,8 +155,8 @@
           ]
         });
 
-        el('status').textContent = `✅ 成功渲染 ${items.length} 个数据点`;
-      } catch (err) { el('status').textContent = '❌ 加载失败：' + err.message; }
+        el('status').textContent = `成功渲染 ${items.length} 个数据点`;
+      } catch (err) { el('status').textContent = '加载失败：' + err.message; }
     }
 
     el('export').addEventListener('click', () => {

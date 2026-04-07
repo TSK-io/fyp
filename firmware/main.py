@@ -22,7 +22,7 @@ try:
                 self.i2c.writeto(self.addr, b'\x01'); time.sleep_ms(10)
                 self.i2c.writeto(self.addr, b'\x10'); time.sleep_ms(120)
                 self.is_initialized = True
-            except Exception as e: print(f"❌ BH1750 初始化失败: {e}")
+            except Exception as e: print(f"BH1750 初始化失败: {e}")
         def read_lux(self):
             if not self.is_initialized: return None
             try:
@@ -30,9 +30,9 @@ try:
                 return ((data[0] << 8) | data[1]) / 1.2
             except: return None
 
-    print("✅ 所有驱动模块加载成功")
+    print("所有驱动模块加载成功")
 except ImportError as e:
-    print(f"❌ 关键驱动模块导入失败: {e}")
+    print(f"关键驱动模块导入失败: {e}")
     # 为了防止死循环重启，这里可以闪灯报错，或者sys.exit
     sys.exit()
 
@@ -57,21 +57,21 @@ display = None
 try: 
     # 直接实例化，不再使用工厂函数
     dht11 = DHT11Sensor(machine.Pin('A1', machine.Pin.IN, machine.Pin.PULL_UP), 'DHT11')
-except Exception as e: print(f"❌ DHT11 初始化失败: {e}")
+except Exception as e: print(f"DHT11 初始化失败: {e}")
 
 # 初始化 I2C 设备
 try:
     i2c = machine.I2C(1, freq=200000)
-    print("✅ I2C 总线初始化成功")
+    print("I2C 总线初始化成功")
     
     light_sensor = BH1750(i2c)
     
     display = ssd1306.SSD1306_I2C(SCREEN_WIDTH, SCREEN_HEIGHT, i2c, I2C_ADDRESS)
-    print("✅ OLED 显示屏初始化成功")
+    print("OLED 显示屏初始化成功")
     
     paj_sensor = PAJ7620(i2c)
     paj_sensor.init()
-    print("✅ PAJ7620 手势传感器初始化成功")
+    print("PAJ7620 手势传感器初始化成功")
     
     display.fill(0)
     display.text('Saffron System', 8, 16)
@@ -79,21 +79,21 @@ try:
     display.show()
     time.sleep(1)
 except Exception as e:
-    print(f"❌ I2C设备(光照/OLED/手势)初始化失败: {e}")
+    print(f"I2C设备(光照/OLED/手势)初始化失败: {e}")
 
 # 初始化模拟传感器和执行器
 try: soil_adc = machine.ADC(machine.Pin('A2'))
-except Exception as e: print(f"❌ 土壤湿度传感器初始化失败: {e}")
+except Exception as e: print(f"土壤湿度传感器初始化失败: {e}")
 
 try:
     pump_relay = machine.Pin('B10', machine.Pin.OUT, value=0)
-    print("✅ 水泵继电器(B10)初始化成功")
-except Exception as e: print(f"❌ 水泵继电器初始化失败: {e}")
+    print("水泵继电器(B10)初始化成功")
+except Exception as e: print(f"水泵继电器初始化失败: {e}")
 
 try:
     led_strip_relay = machine.Pin('B12', machine.Pin.OUT, value=0)
-    print("✅ LED灯带继电器(B12)初始化成功")
-except Exception as e: print(f"❌ LED灯带继电器初始化失败: {e}")
+    print("LED灯带继电器(B12)初始化成功")
+except Exception as e: print(f"LED灯带继电器初始化失败: {e}")
 
 # --- OLED 显示逻辑 ---
 def update_display(data, page_num):
@@ -162,7 +162,7 @@ def process_command(cmd):
         else: print(f'{{"error": "Unknown command: {cmd}"}}')
 
 # --- 主循环 ---
-print("\n🚀 开始主循环 (Root版)...")
+print("\n开始主循环 (Root版)...")
 print("-" * 50)
 cycle_count = 0; last_sensor_read_time = time.ticks_ms();
 poll_obj = select.poll(); poll_obj.register(sys.stdin, select.POLLIN)
