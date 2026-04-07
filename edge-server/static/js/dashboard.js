@@ -34,7 +34,11 @@
     policyStatus: document.getElementById("policy-status"),
     policyLiveBanner: document.getElementById("policy-live-banner"),
     actuatorStatus: document.getElementById("actuator-status"),
+    wateringToast: document.getElementById("watering-toast"),
   };
+
+  let lastWateringState = null;
+  let wateringToastTimer = null;
 
   function setControlStatus(message) {
     els.controlStatus.textContent = message;
@@ -50,6 +54,16 @@
   function setPolicyLiveBanner({ active, text }) {
     els.policyLiveBanner.className = `pill-status ${active ? "pill-status--ok" : ""}`.trim();
     els.policyLiveBanner.textContent = text;
+  }
+
+  function showWateringToast() {
+    if (!els.wateringToast) return;
+
+    els.wateringToast.classList.add("is-visible");
+    window.clearTimeout(wateringToastTimer);
+    wateringToastTimer = window.setTimeout(() => {
+      els.wateringToast.classList.remove("is-visible");
+    }, 2600);
   }
 
   async function fetchData() {
@@ -172,6 +186,10 @@
   async function refreshPolicyStatus() {
     try {
       const state = await EdgeApp.fetchJson(api.policyStatus);
+      if (state.watering && lastWateringState !== true) {
+        showWateringToast();
+      }
+
       if (state.watering) {
         els.policyStatus.textContent = `自动浇水中${state.last_start_ts ? `，开始于 ${state.last_start_ts}` : ""}`;
         if (state.last_reason) {
@@ -189,6 +207,7 @@
       els.actuatorStatus.textContent = feedback.timestamp
         ? `${feedback.message || "状态已更新"} (${feedback.timestamp})`
         : "等待执行器状态更新";
+      lastWateringState = Boolean(state.watering);
     } catch (error) {
       els.policyStatus.textContent = "边缘服务连接异常";
       setPolicyLiveBanner({ active: false, text: "自动浇水状态获取失败" });
