@@ -1,17 +1,18 @@
 :root {
-  --shell-bg: #f4efe6;
-  --shell-surface: rgba(255, 251, 245, 0.9);
-  --shell-surface-strong: #fffdf8;
-  --shell-text: #2b241d;
-  --shell-muted: #726457;
-  --shell-border: rgba(82, 60, 39, 0.12);
-  --shell-shadow: 0 20px 50px rgba(74, 53, 33, 0.12);
+  --shell-bg: #f3f8f3;
+  --shell-surface: rgba(255, 255, 255, 0.9);
+  --shell-surface-strong: #ffffff;
+  --shell-text: #163126;
+  --shell-muted: #5e766a;
+  --shell-border: rgba(57, 99, 72, 0.12);
+  --shell-shadow: 0 22px 50px rgba(31, 74, 49, 0.08);
   --shell-radius: 24px;
-  --shell-accent: #c96f2d;
-  --shell-accent-strong: #8e3b12;
-  --shell-accent-soft: #f7d7b8;
-  --shell-success: #2d7b55;
-  --shell-danger: #b64b3f;
+  --shell-accent: #53a36d;
+  --shell-accent-strong: #1f6a3d;
+  --shell-accent-soft: #e6f5e9;
+  --shell-success: #2c8750;
+  --shell-danger: #c45f5d;
+  --shell-ghost: #edf5ef;
 }
 
 * {
@@ -28,9 +29,9 @@ body {
   font-family: "Manrope", sans-serif;
   color: var(--shell-text);
   background:
-    radial-gradient(circle at top left, rgba(221, 178, 120, 0.35), transparent 30%),
-    radial-gradient(circle at top right, rgba(191, 118, 81, 0.18), transparent 25%),
-    linear-gradient(180deg, #fbf6ef 0%, var(--shell-bg) 100%);
+    radial-gradient(circle at top left, rgba(143, 212, 166, 0.22), transparent 30%),
+    radial-gradient(circle at top right, rgba(188, 230, 198, 0.18), transparent 25%),
+    linear-gradient(180deg, #fbfefb 0%, var(--shell-bg) 100%);
 }
 
 a {
@@ -62,7 +63,7 @@ select {
   padding: 18px 22px;
   border: 1px solid var(--shell-border);
   border-radius: var(--shell-radius);
-  background: rgba(255, 252, 247, 0.74);
+  background: rgba(255, 255, 255, 0.8);
   backdrop-filter: blur(16px);
   box-shadow: var(--shell-shadow);
   position: sticky;
@@ -95,13 +96,13 @@ select {
   padding: 10px 16px;
   border: 1px solid var(--shell-border);
   color: var(--shell-accent-strong);
-  background: rgba(255, 245, 235, 0.9);
+  background: rgba(248, 253, 249, 0.96);
   transition: transform 0.2s ease, background 0.2s ease;
 }
 
 .topbar__links a:hover {
   transform: translateY(-1px);
-  background: #fff3e6;
+  background: #eef8f0;
 }
 
 .page-section {
@@ -131,29 +132,29 @@ select {
   font-size: 13px;
   border: 1px solid var(--shell-border);
   color: var(--shell-muted);
-  background: rgba(255, 255, 255, 0.72);
+  background: rgba(248, 252, 249, 0.96);
 }
 
 .pill-status--ok {
-  color: #145c3e;
-  background: rgba(196, 239, 214, 0.95);
-  border-color: rgba(45, 123, 85, 0.3);
+  color: #17643a;
+  background: rgba(222, 244, 229, 0.98);
+  border-color: rgba(44, 135, 80, 0.28);
 }
 
 .pill-status--error {
   color: #7d251d;
-  background: rgba(249, 214, 210, 0.95);
-  border-color: rgba(182, 75, 63, 0.28);
+  background: rgba(250, 232, 230, 0.98);
+  border-color: rgba(196, 95, 93, 0.26);
 }
 
 .button {
-  border: none;
+  border: 1px solid transparent;
   border-radius: 14px;
   padding: 12px 18px;
   cursor: pointer;
   transition: transform 0.18s ease, opacity 0.18s ease, box-shadow 0.18s ease;
   color: #fff;
-  box-shadow: 0 14px 30px rgba(89, 49, 24, 0.15);
+  box-shadow: 0 14px 28px rgba(39, 93, 58, 0.12);
 }
 
 .button:hover {
@@ -166,11 +167,13 @@ select {
 }
 
 .button--primary {
-  background: linear-gradient(135deg, #cf7b32, #ad4d1a);
+  background: linear-gradient(135deg, #62b57b, #2d7a49);
 }
 
 .button--secondary {
-  background: linear-gradient(135deg, #537d6d, #31584c);
+  background: linear-gradient(135deg, #edf8ef, #d9efdf);
+  color: var(--shell-accent-strong);
+  border-color: rgba(57, 99, 72, 0.12);
 }
 
 .button--danger {
@@ -179,7 +182,8 @@ select {
 
 .button--ghost {
   color: var(--shell-text);
-  background: linear-gradient(135deg, #f5ede3, #e6dacb);
+  background: linear-gradient(135deg, #ffffff, var(--shell-ghost));
+  border-color: rgba(57, 99, 72, 0.14);
 }
 
 .status-text {
@@ -202,16 +206,23 @@ select {
 
 .field input {
   width: 100%;
-  border: 1px solid rgba(104, 83, 62, 0.18);
-  background: rgba(255, 255, 255, 0.82);
+  border: 1px solid rgba(57, 99, 72, 0.16);
+  background: rgba(251, 254, 252, 0.96);
   border-radius: 14px;
   padding: 12px 14px;
   outline: none;
 }
 
 .field input:focus {
-  border-color: rgba(201, 111, 45, 0.42);
-  box-shadow: 0 0 0 4px rgba(201, 111, 45, 0.12);
+  border-color: rgba(83, 163, 109, 0.42);
+  box-shadow: 0 0 0 4px rgba(83, 163, 109, 0.12);
+}
+
+.panel-intro {
+  margin: -2px 0 18px;
+  color: var(--shell-muted);
+  font-size: 14px;
+  line-height: 1.7;
 }
 
 @media (max-width: 760px) {

@@ -22,11 +22,27 @@
       </header>
 
       <section class="page-section panel dashboard-hero">
-        <div>
+        <div class="dashboard-hero__content">
           <div class="dashboard-hero__eyebrow">Saffron Edge Console</div>
+          <h2 class="dashboard-hero__title">白色主基调的信息看板，让监控、控制和策略配置更清晰。</h2>
+          <p class="dashboard-hero__summary">统一查看环境状态、快速触发设备动作，并在同一屏完成自动灌溉参数配置，减少操作跳转和视觉干扰。</p>
           <div class="dashboard-hero__meta">
             <span id="cloud-badge" class="pill-status">探测云端连接状态...</span>
             <span class="pill-status">STM32 MicroPython + Raspberry Pi</span>
+          </div>
+          <div class="dashboard-hero__stats">
+            <article class="hero-stat">
+              <span class="hero-stat__label">当前模式</span>
+              <strong class="hero-stat__value">实时监控</strong>
+            </article>
+            <article class="hero-stat">
+              <span class="hero-stat__label">控制方式</span>
+              <strong class="hero-stat__value">手动 + AI 联动</strong>
+            </article>
+            <article class="hero-stat">
+              <span class="hero-stat__label">策略状态</span>
+              <strong class="hero-stat__value"><span id="policy-status">获取中...</span></strong>
+            </article>
           </div>
         </div>
         <aside class="panel dashboard-hero__qr">
@@ -65,6 +81,7 @@
       <section class="page-section dashboard-grid">
         <article class="panel control-panel">
           <h2 class="section-heading">边缘设备与 AI 控制</h2>
+          <p class="panel-intro">将高频操作收敛为一组主操作按钮，方便在桌面和移动端快速执行。</p>
           <div class="button-row">
             <button id="pump-on-btn" class="button button--primary">开启水泵</button>
             <button id="pump-off-btn" class="button button--danger">关闭水泵</button>
@@ -96,6 +113,7 @@
 
         <article class="panel policy-panel">
           <h2 class="section-heading">自动灌溉边缘策略</h2>
+          <p class="panel-intro">把策略开关、阈值和口令集中到一个轻量表单区域，减少视线来回切换。</p>
           <div class="policy-form">
             <label class="policy-toggle" for="policy-enabled">
               <input type="checkbox" id="policy-enabled">
@@ -123,7 +141,7 @@
             </div>
             <button id="policy-save" class="button button--primary">保存策略</button>
             <div id="policy-msg" class="status-text"></div>
-            <div class="pill-status">当前状态: <span id="policy-status">获取中...</span></div>
+            <div class="pill-status">策略摘要已同步到顶部概览卡片</div>
           </div>
         </article>
       </section>

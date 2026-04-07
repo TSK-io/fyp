@@ -6,7 +6,9 @@
 
 .login-card {
   width: min(460px, 100%);
-  padding: 28px;
+  padding: 30px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(247, 252, 248, 0.95));
 }
 
 .login-card__header {
@@ -17,7 +19,7 @@
   display: inline-flex;
   padding: 8px 12px;
   border-radius: 999px;
-  background: rgba(247, 215, 184, 0.74);
+  background: rgba(230, 245, 233, 0.88);
   color: var(--shell-accent-strong);
   font-size: 12px;
   font-weight: 700;

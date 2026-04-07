@@ -1,13 +1,13 @@
 .history-filters {
   padding: 22px;
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr)) auto;
   gap: 14px;
   align-items: end;
 }
 
 .history-filters .field {
-  min-width: 190px;
+  min-width: 0;
 }
 
 .history-actions {
@@ -17,8 +17,8 @@
 }
 
 .history-status {
-  margin-left: auto;
   align-self: center;
+  justify-self: end;
 }
 
 .chart-grid {
@@ -43,12 +43,22 @@
 }
 
 @media (max-width: 980px) {
+  .history-filters {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .chart-grid {
     grid-template-columns: 1fr;
   }
 
   .history-status {
-    margin-left: 0;
     width: 100%;
+    justify-self: stretch;
+  }
+}
+
+@media (max-width: 620px) {
+  .history-filters {
+    grid-template-columns: 1fr;
   }
 }

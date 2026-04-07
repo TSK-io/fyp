@@ -49,6 +49,7 @@
   width: 82px;
   border-radius: 12px;
   border: 1px solid var(--shell-border);
+  background: rgba(251, 254, 252, 0.96);
   padding: 10px 12px;
 }
 
@@ -57,7 +58,7 @@
   max-height: 540px;
   border: 1px solid var(--shell-border);
   border-radius: 18px;
-  background: rgba(255, 255, 255, 0.72);
+  background: rgba(251, 254, 252, 0.96);
 }
 
 .log-table {
@@ -68,7 +69,7 @@
 .log-table th,
 .log-table td {
   padding: 14px 16px;
-  border-bottom: 1px solid rgba(82, 60, 39, 0.08);
+  border-bottom: 1px solid rgba(57, 99, 72, 0.08);
   text-align: left;
   font-size: 14px;
 }
@@ -76,7 +77,7 @@
 .log-table th {
   position: sticky;
   top: 0;
-  background: #fff8f0;
+  background: #f6fbf7;
   z-index: 1;
   font-size: 13px;
   color: var(--shell-muted);
@@ -91,8 +92,8 @@
 }
 
 .tag--ok {
-  background: rgba(196, 239, 214, 0.9);
-  color: #145c3e;
+  background: rgba(222, 244, 229, 0.96);
+  color: #17643a;
 }
 
 .tag--error {
