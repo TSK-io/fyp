@@ -61,8 +61,8 @@
   function updateCloudBadge(cloudOk) {
     els.cloudBadge.className = `pill-status ${cloudOk ? "pill-status--ok" : "pill-status--error"}`;
     els.cloudBadge.textContent = cloudOk
-      ? "边云协同正常，数据正在实时上云"
-      : "边缘自治模式，云端链路暂时不可用";
+      ? "云端在线"
+      : "离线自治";
   }
 
   function setPolicyLiveBanner({ active, text }) {
@@ -71,7 +71,7 @@
   }
 
   function setAiModeBadge(mode) {
-    const label = mode === "llm" ? "本地 LLM 推理" : "规则引擎降级";
+    const label = mode === "llm" ? "本地 LLM" : "规则引擎";
     const isOk = mode === "llm";
     els.aiModeBadge.className = `pill-status ${isOk ? "pill-status--ok" : ""}`.trim();
     els.aiModeBadge.textContent = label;
@@ -93,7 +93,7 @@
     };
     const decision = diagnosis.irrigation_decision || {};
     els.intelBadge.className = riskClassMap[diagnosis.risk_level] || "pill-status";
-    els.intelBadge.textContent = `AI 状态: ${diagnosis.risk_label || "未知"}`;
+    els.intelBadge.textContent = diagnosis.risk_label || "未知";
     els.intelScore.textContent = diagnosis.overall_score ?? "--";
     els.intelRisk.textContent = diagnosis.risk_label || "等待分析";
     els.intelSummary.textContent = diagnosis.summary || "暂无诊断摘要";
@@ -261,7 +261,7 @@
         seconds: "policy-seconds",
         cooldown: "policy-cooldown",
       });
-      els.policyMsg.textContent = "已同步当前策略";
+      els.policyMsg.textContent = "策略已加载";
     } catch (error) {
       els.policyMsg.textContent = `无法加载策略: ${error.message}`;
     }
@@ -276,7 +276,7 @@
         seconds: "policy-seconds",
         cooldown: "policy-cooldown",
       }, els.adminToken.value);
-      els.policyMsg.textContent = "已保存至数据库";
+      els.policyMsg.textContent = "保存成功";
       els.policyMsg.style.color = "var(--shell-success)";
       refreshPolicyStatus();
     } catch (error) {
@@ -293,21 +293,18 @@
       }
 
       if (state.watering) {
-        els.policyStatus.textContent = `自动浇水中${state.last_start_ts ? `，开始于 ${state.last_start_ts}` : ""}`;
+        els.policyStatus.textContent = "浇水中";
         if (state.last_reason) {
-          els.policyStatus.textContent += `，触发原因: ${state.last_reason}`;
+          els.policyStatus.textContent += ` · ${state.last_reason}`;
         }
         setPolicyLiveBanner({ active: true, text: "自动浇水中" });
       } else {
-        els.policyStatus.textContent = `待机监控中，上次执行 ${state.last_end_ts || "未知"}`;
-        if (state.last_reason) {
-          els.policyStatus.textContent += `，上次触发原因: ${state.last_reason}`;
-        }
+        els.policyStatus.textContent = "待机";
         if (state.effective_threshold != null) {
-          els.policyStatus.textContent += `，动态阈值 ${state.effective_threshold}%`;
+          els.policyStatus.textContent += ` · 阈值 ${state.effective_threshold}%`;
         }
         if (state.decision_hint) {
-          els.policyStatus.textContent += `，当前判断: ${state.decision_hint}`;
+          els.policyStatus.textContent += ` · ${state.decision_hint}`;
         }
         setPolicyLiveBanner({ active: false, text: "自动浇水待机中" });
       }
@@ -317,7 +314,7 @@
         : "等待执行器状态更新";
       lastWateringState = Boolean(state.watering);
     } catch (error) {
-      els.policyStatus.textContent = "边缘服务连接异常";
+      els.policyStatus.textContent = "状态异常";
       setPolicyLiveBanner({ active: false, text: "自动浇水状态获取失败" });
       els.actuatorStatus.textContent = "执行器状态获取失败";
     }

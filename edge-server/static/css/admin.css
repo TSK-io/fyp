@@ -1,21 +1,21 @@
 .admin-layout {
   display: grid;
-  grid-template-columns: 340px minmax(0, 1fr);
-  gap: 18px;
+  grid-template-columns: 300px minmax(0, 1fr);
+  gap: 14px;
 }
 
 .admin-card {
-  padding: 24px;
+  padding: 18px;
 }
 
 .auth-banner {
-  margin-top: 18px;
-  padding: 14px 16px;
+  margin-top: 14px;
+  padding: 10px 12px;
 }
 
 .admin-form {
   display: grid;
-  gap: 14px;
+  gap: 10px;
 }
 
 .admin-form__toggle {
@@ -23,6 +23,10 @@
   align-items: center;
   gap: 10px;
   font-weight: 700;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(240, 248, 242, 0.9);
+  border: 1px solid rgba(57, 99, 72, 0.1);
 }
 
 .admin-form__toggle input {
@@ -34,30 +38,34 @@
 .admin-toolbar {
   display: flex;
   justify-content: space-between;
-  gap: 12px;
+  gap: 10px;
   align-items: center;
-  margin-bottom: 14px;
+  margin-bottom: 10px;
+}
+
+.admin-toolbar__heading .section-heading {
+  margin-bottom: 4px;
 }
 
 .admin-toolbar__actions {
   display: flex;
-  gap: 10px;
+  gap: 8px;
   align-items: center;
 }
 
 .admin-toolbar input {
-  width: 82px;
+  width: 72px;
   border-radius: 12px;
   border: 1px solid var(--shell-border);
   background: rgba(251, 254, 252, 0.96);
-  padding: 10px 12px;
+  padding: 8px 10px;
 }
 
 .log-shell {
   overflow: auto;
-  max-height: 540px;
+  max-height: 470px;
   border: 1px solid var(--shell-border);
-  border-radius: 18px;
+  border-radius: 16px;
   background: rgba(251, 254, 252, 0.96);
 }
 
@@ -68,10 +76,10 @@
 
 .log-table th,
 .log-table td {
-  padding: 14px 16px;
+  padding: 10px 12px;
   border-bottom: 1px solid rgba(57, 99, 72, 0.08);
   text-align: left;
-  font-size: 14px;
+  font-size: 13px;
 }
 
 .log-table th {
@@ -79,13 +87,17 @@
   top: 0;
   background: #f6fbf7;
   z-index: 1;
-  font-size: 13px;
+  font-size: 12px;
   color: var(--shell-muted);
+}
+
+.admin-status {
+  margin-top: 10px;
 }
 
 .tag {
   display: inline-flex;
-  padding: 4px 10px;
+  padding: 3px 8px;
   border-radius: 999px;
   font-size: 12px;
   font-weight: 700;

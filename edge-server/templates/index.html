@@ -16,7 +16,6 @@
       <header class="topbar">
         <div>
           <h1 class="topbar__title">藏红花智能培育中心</h1>
-          <p class="topbar__subtitle">实时感知、边云协同、设备控制统一收敛到清晰的监控面板。</p>
         </div>
         <nav class="topbar__links">
           <a href="/history">历史数据</a>
@@ -27,32 +26,13 @@
 
       <section class="page-section panel dashboard-hero">
         <div class="dashboard-hero__content">
-          <div class="dashboard-hero__eyebrow">Saffron Edge Console</div>
-          <h2 class="dashboard-hero__title">白色主基调的信息看板，让监控、控制和策略配置更清晰。</h2>
-          <p class="dashboard-hero__summary">统一查看环境状态、快速触发设备动作，并在同一屏完成自动灌溉参数配置，减少操作跳转和视觉干扰。</p>
+          <h2 class="dashboard-hero__title">实时监控与控制</h2>
           <div class="dashboard-hero__meta">
             <span id="cloud-badge" class="pill-status">探测云端连接状态...</span>
-            <span class="pill-status">STM32 MicroPython + Raspberry Pi</span>
-          </div>
-          <div class="dashboard-hero__stats">
-            <article class="hero-stat">
-              <span class="hero-stat__label">当前模式</span>
-              <strong class="hero-stat__value">实时监控</strong>
-            </article>
-            <article class="hero-stat">
-              <span class="hero-stat__label">控制方式</span>
-              <strong class="hero-stat__value">手动 + AI 联动</strong>
-            </article>
-            <article class="hero-stat">
-              <span class="hero-stat__label">策略状态</span>
-              <strong class="hero-stat__value"><span id="policy-status">获取中...</span></strong>
-            </article>
+            <span id="policy-status" class="pill-status">策略状态获取中...</span>
+            <span class="status-text dashboard-hero__sync">最后同步 <span id="update-time">从未</span></span>
           </div>
         </div>
-        <aside class="panel dashboard-hero__qr">
-          <img src="http://104.248.150.11/qrcode" alt="云端看板二维码">
-          <span>扫码查看公网看板</span>
-        </aside>
       </section>
 
       <section class="page-section">
@@ -76,8 +56,7 @@
           </article>
           <article class="panel sensor-card">
             <div class="sensor-card__label">现场手势交互</div>
-            <div class="sensor-card__value" style="font-size: 22px;"><span id="gesture">--</span></div>
-            <div class="sensor-card__note">来自边缘节点的最新交互态势</div>
+            <div class="sensor-card__value sensor-card__value--gesture"><span id="gesture">--</span></div>
           </article>
         </div>
       </section>
@@ -87,7 +66,6 @@
           <div class="intelligence-panel__header">
             <div>
               <h2 class="section-heading">智能诊断中枢</h2>
-              <p class="panel-intro">将实时数据、历史趋势与灌溉策略合并分析，输出更像专家系统的预警与动作建议。</p>
             </div>
             <span id="intel-badge" class="pill-status">AI 诊断同步中...</span>
           </div>
@@ -137,7 +115,6 @@
       <section class="page-section dashboard-grid">
         <article class="panel control-panel">
           <h2 class="section-heading">边缘设备与 AI 控制</h2>
-          <p class="panel-intro">将高频操作收敛为一组主操作按钮，方便在桌面和移动端快速执行。</p>
           <div class="button-row">
             <button id="pump-on-btn" class="button button--primary">开启水泵</button>
             <button id="pump-off-btn" class="button button--danger">关闭水泵</button>
@@ -146,12 +123,12 @@
             <button id="led-on-btn" class="button button--secondary">开启指示灯</button>
             <button id="led-off-btn" class="button button--ghost">关闭指示灯</button>
           </div>
-          <div class="button-row" style="margin-top: 12px;">
+          <div class="button-row button-row--offset">
             <button id="capture-photo-btn" class="button button--secondary">现场抓拍</button>
             <button id="analyze-vision-btn" class="button button--primary">AI 视觉表型分析</button>
             <button id="ask-ai-btn" class="button button--primary">咨询 Qwen 专家系统</button>
           </div>
-          <div id="control-status" class="status-text" style="margin-top: 16px;">等待指令...</div>
+          <div id="control-status" class="status-text control-panel__status">等待指令...</div>
 
           <div id="vision-results" class="result-box">
             <h3>OpenCV 表型分析结果</h3>
@@ -170,7 +147,6 @@
 
         <article class="panel policy-panel">
           <h2 class="section-heading">自动灌溉边缘策略</h2>
-          <p class="panel-intro">把策略开关、阈值和口令集中到一个轻量表单区域，减少视线来回切换。</p>
           <div class="policy-form">
             <label class="policy-toggle" for="policy-enabled">
               <input type="checkbox" id="policy-enabled">
@@ -178,7 +154,7 @@
             </label>
             <div class="policy-inline">
               <div class="field">
-                <label for="policy-threshold">触发阈值</label>
+                <label for="policy-threshold">土壤阈值</label>
                 <input type="number" id="policy-threshold" min="0" max="100" step="0.1" placeholder="%">
               </div>
               <div class="field">
@@ -198,19 +174,20 @@
             </div>
             <button id="policy-save" class="button button--primary">保存策略</button>
             <div id="policy-live-banner" class="pill-status">自动浇水状态同步中...</div>
-            <div class="status-text">阈值判断使用土壤湿度，不是空气湿度。</div>
             <div id="policy-msg" class="status-text"></div>
             <div id="actuator-status" class="status-text">等待执行器状态更新</div>
-            <div class="pill-status">策略摘要已同步到顶部概览卡片</div>
           </div>
         </article>
       </section>
 
-      <section class="page-section panel page-meta">
-        <div class="page-meta__text">
-          数据最后同步于: <span id="update-time">从未</span><br>
-          系统持续同步边缘节点状态与云端服务连接情况。
-        </div>
+      <section class="page-section dashboard-footer">
+        <aside class="panel qr-dock">
+          <div class="qr-dock__content">
+            <h3 class="qr-dock__title">公网看板</h3>
+            <p class="qr-dock__text">扫码访问外部页面</p>
+          </div>
+          <img class="qr-dock__image" src="http://104.248.150.11/qrcode" alt="公网看板二维码">
+        </aside>
       </section>
     </div>
   </div>

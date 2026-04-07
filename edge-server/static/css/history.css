@@ -1,8 +1,8 @@
 .history-filters {
-  padding: 22px;
+  padding: 16px;
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr)) auto;
-  gap: 14px;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) auto auto;
+  gap: 10px;
   align-items: end;
 }
 
@@ -12,7 +12,7 @@
 
 .history-actions {
   display: flex;
-  gap: 10px;
+  gap: 8px;
   flex-wrap: wrap;
 }
 
@@ -24,22 +24,15 @@
 .chart-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 18px;
+  gap: 14px;
 }
 
 .chart-panel {
-  padding: 20px;
+  padding: 16px;
 }
 
 .chart-panel__canvas {
-  height: 380px;
-}
-
-.history-note {
-  margin-top: 18px;
-  padding: 16px 20px;
-  color: var(--shell-muted);
-  font-size: 13px;
+  height: 330px;
 }
 
 @media (max-width: 980px) {

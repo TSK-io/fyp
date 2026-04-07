@@ -92,7 +92,7 @@
 
   async function loadData() {
     const params = buildQueryParams();
-    el("status").textContent = "数据拉取中...";
+    el("status").textContent = "加载中...";
     try {
       const [historyResult, intervals] = await Promise.all([
         EdgeApp.fetchJson(`${api.history}?${params.toString()}`),
@@ -100,7 +100,7 @@
       ]);
       const items = historyResult.items || [];
       renderCharts(items, intervals);
-      el("status").textContent = `成功渲染 ${items.length} 个数据点`;
+      el("status").textContent = `${items.length} 个数据点`;
     } catch (error) {
       el("status").textContent = `加载失败: ${error.message}`;
     }

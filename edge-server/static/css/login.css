@@ -5,57 +5,41 @@
 }
 
 .login-card {
-  width: min(460px, 100%);
-  padding: 30px;
+  width: min(420px, 100%);
+  padding: 22px;
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(247, 252, 248, 0.95));
 }
 
 .login-card__header {
-  margin-bottom: 20px;
-}
-
-.login-card__eyebrow {
-  display: inline-flex;
-  padding: 8px 12px;
-  border-radius: 999px;
-  background: rgba(230, 245, 233, 0.88);
-  color: var(--shell-accent-strong);
-  font-size: 12px;
-  font-weight: 700;
+  margin-bottom: 12px;
 }
 
 .login-card__title {
-  margin: 14px 0 8px;
-  font-size: 32px;
-  letter-spacing: -0.05em;
-}
-
-.login-card__desc {
   margin: 0;
-  color: var(--shell-muted);
-  line-height: 1.7;
+  font-size: 24px;
+  letter-spacing: -0.05em;
 }
 
 .login-form {
   display: grid;
-  gap: 14px;
+  gap: 12px;
 }
 
 .login-actions {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 10px;
-  margin-top: 6px;
+  gap: 8px;
+  margin-top: 4px;
 }
 
 .login-links {
   display: flex;
   justify-content: center;
-  gap: 12px;
-  margin-top: 18px;
+  gap: 8px;
+  margin-top: 14px;
   color: var(--shell-muted);
-  font-size: 14px;
+  font-size: 13px;
 }
 
 .login-links a {

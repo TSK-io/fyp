@@ -20,14 +20,14 @@
         seconds: "sec",
         cooldown: "cd",
       });
-      els.message.textContent = "当前策略已加载";
+      els.message.textContent = "策略已加载";
     } catch (error) {
       els.message.textContent = `获取硬件策略失败: ${error.message}`;
     }
   }
 
   async function savePolicy() {
-    els.message.textContent = "正在下发...";
+    els.message.textContent = "保存中...";
     try {
       await EdgeApp.savePolicyFromForm({
         enabled: "en",
@@ -36,7 +36,7 @@
         cooldown: "cd",
       }, els.token.value);
       els.message.style.color = "var(--shell-success)";
-      els.message.textContent = "策略已成功部署到边缘节点";
+      els.message.textContent = "保存成功";
     } catch (error) {
       els.message.style.color = "var(--shell-danger)";
       els.message.textContent = `错误: ${error.message}`;
@@ -45,7 +45,7 @@
 
   async function loadLogs() {
     const limit = Math.max(10, Math.min(500, parseInt(els.limit.value || "100", 10)));
-    els.status.textContent = "拉取中...";
+    els.status.textContent = "加载中...";
     try {
       const response = await EdgeApp.fetchJson(`/api/v1/control/logs?limit=${limit}`);
       const items = response.items || [];
@@ -57,7 +57,7 @@
           <td>${item.success ? '<span class="tag tag--ok">执行成功</span>' : '<span class="tag tag--error">执行失败</span>'}</td>
         </tr>
       `).join("");
-      els.status.textContent = `当前展示最新的 ${items.length} 条流水`;
+      els.status.textContent = `${items.length} 条记录`;
     } catch (error) {
       els.status.textContent = `加载失败: ${error.message}`;
     }
@@ -67,11 +67,11 @@
     const user = await EdgeApp.fetchCurrentUser();
     if (!user) {
       els.authInfo.className = "panel auth-banner pill-status pill-status--error";
-      els.authInfo.innerHTML = '访客模式，请前往 <a href="/login">/login</a> 登录获取写权限';
+      els.authInfo.innerHTML = '访客模式，请前往 <a href="/login">登录</a>';
       return;
     }
     els.authInfo.className = "panel auth-banner pill-status pill-status--ok";
-    els.authInfo.textContent = `管理员在线: ${user.username} (Role: ${(user.roles || []).join(", ") || "User"})`;
+    els.authInfo.textContent = `当前用户: ${user.username}`;
   }
 
   document.getElementById("save").addEventListener("click", savePolicy);

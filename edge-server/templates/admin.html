@@ -12,7 +12,6 @@
       <header class="topbar">
         <div>
           <h1 class="topbar__title">核心参数与系统审计</h1>
-          <p class="topbar__subtitle">策略管理和设备执行日志已经从模板内联脚本中分离。</p>
         </div>
         <nav class="topbar__links">
           <a href="/">实时控制</a>
@@ -29,34 +28,33 @@
           <div class="admin-form">
             <label class="admin-form__toggle" for="en">
               <input type="checkbox" id="en">
-              <span>允许边缘网关接管灌溉</span>
+              <span>启用边缘自动灌溉</span>
             </label>
             <div class="field">
-              <label for="th">触发阈值：土壤湿度低于 (%)</label>
+              <label for="th">触发阈值 (%)，基于土壤湿度</label>
               <input id="th" type="number" min="0" max="100" step="0.1">
             </div>
             <div class="field">
-              <label for="sec">动作参数：单次浇水时长 (秒)</label>
+              <label for="sec">单次浇水时长 (秒)</label>
               <input id="sec" type="number" min="1" max="3600" step="1">
             </div>
             <div class="field">
-              <label for="cd">安全策略：最小冷却间隔 (秒)</label>
+              <label for="cd">最小冷却间隔 (秒)</label>
               <input id="cd" type="number" min="0" max="86400" step="1">
             </div>
             <div class="field">
-              <label for="tok">特权放行 (Admin Token) 可选</label>
+              <label for="tok">Admin Token（可选）</label>
               <input id="tok" type="password" placeholder="若未登录，可凭口令覆写">
             </div>
-            <button id="save" class="button button--primary">部署策略至边缘节点</button>
+            <button id="save" class="button button--primary">保存到边缘节点</button>
             <div id="msg" class="status-text"></div>
           </div>
         </article>
 
         <article class="panel admin-card">
           <div class="admin-toolbar">
-            <div>
-              <h2 class="section-heading" style="margin-bottom: 6px;">终端设备审计日志</h2>
-              <div class="status-text">日志表格渲染和鉴权逻辑已迁移到独立脚本。</div>
+            <div class="admin-toolbar__heading">
+              <h2 class="section-heading">终端设备审计日志</h2>
             </div>
             <div class="admin-toolbar__actions">
               <input id="limit" type="number" min="10" max="500" step="10" value="100">
@@ -77,7 +75,7 @@
               <tbody id="logs"></tbody>
             </table>
           </div>
-          <div id="status" class="status-text" style="margin-top: 12px;">日志拉取中...</div>
+          <div id="status" class="status-text admin-status">日志拉取中...</div>
         </article>
       </section>
     </div>
