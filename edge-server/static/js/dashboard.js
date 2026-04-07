@@ -1,6 +1,7 @@
 (() => {
   const api = {
     sensor: "/api/v1/sensors/latest",
+    intelligence: "/api/v1/intelligence/diagnosis",
     control: "/api/v1/control",
     capture: "/api/v1/camera/capture",
     vision: "/api/v1/vision/analyze",
@@ -17,6 +18,18 @@
     updateTime: document.getElementById("update-time"),
     controlStatus: document.getElementById("control-status"),
     cloudBadge: document.getElementById("cloud-badge"),
+    intelBadge: document.getElementById("intel-badge"),
+    intelScore: document.getElementById("intel-score"),
+    intelRisk: document.getElementById("intel-risk"),
+    intelSummary: document.getElementById("intel-summary"),
+    intelThreshold: document.getElementById("intel-threshold"),
+    intelDuration: document.getElementById("intel-duration"),
+    intelAction: document.getElementById("intel-action"),
+    intelDecisionReason: document.getElementById("intel-decision-reason"),
+    intelMetrics: document.getElementById("intel-metrics"),
+    intelTrends: document.getElementById("intel-trends"),
+    intelAlerts: document.getElementById("intel-alerts"),
+    intelRecommendations: document.getElementById("intel-recommendations"),
     visionResults: document.getElementById("vision-results"),
     visionColor: document.getElementById("vision-color"),
     visionStage: document.getElementById("vision-stage"),
@@ -24,6 +37,7 @@
     visionImage: document.getElementById("vision-image"),
     aiResponse: document.getElementById("ai-response"),
     aiText: document.getElementById("ai-text"),
+    aiModeBadge: document.getElementById("ai-mode-badge"),
     askAiBtn: document.getElementById("ask-ai-btn"),
     policyEnabled: document.getElementById("policy-enabled"),
     policyThreshold: document.getElementById("policy-threshold"),
@@ -56,6 +70,79 @@
     els.policyLiveBanner.textContent = text;
   }
 
+  function setAiModeBadge(mode) {
+    const label = mode === "llm" ? "本地 LLM 推理" : "规则引擎降级";
+    const isOk = mode === "llm";
+    els.aiModeBadge.className = `pill-status ${isOk ? "pill-status--ok" : ""}`.trim();
+    els.aiModeBadge.textContent = label;
+  }
+
+  function renderTextList(container, items, itemClassName, emptyText) {
+    if (!items || items.length === 0) {
+      container.innerHTML = `<div class="${itemClassName} is-empty">${emptyText}</div>`;
+      return;
+    }
+    container.innerHTML = items.join("");
+  }
+
+  function renderDiagnosis(diagnosis) {
+    const riskClassMap = {
+      low: "pill-status pill-status--ok",
+      medium: "pill-status",
+      high: "pill-status pill-status--error",
+    };
+    const decision = diagnosis.irrigation_decision || {};
+    els.intelBadge.className = riskClassMap[diagnosis.risk_level] || "pill-status";
+    els.intelBadge.textContent = `AI 状态: ${diagnosis.risk_label || "未知"}`;
+    els.intelScore.textContent = diagnosis.overall_score ?? "--";
+    els.intelRisk.textContent = diagnosis.risk_label || "等待分析";
+    els.intelSummary.textContent = diagnosis.summary || "暂无诊断摘要";
+    els.intelThreshold.textContent = decision.effective_threshold != null ? `${decision.effective_threshold}%` : "--";
+    els.intelDuration.textContent = decision.recommended_duration != null ? `${decision.recommended_duration} 秒` : "--";
+    els.intelAction.textContent = decision.action || "--";
+    els.intelDecisionReason.textContent = decision.reason || "等待决策结果...";
+
+    const metrics = (diagnosis.metrics || []).map((metric) => `
+      <article class="intel-metric-card intel-metric-card--${metric.status || "missing"}">
+        <span class="intel-metric-card__label">${metric.label}</span>
+        <strong class="intel-metric-card__score">${metric.score ?? "--"}</strong>
+        <span class="intel-metric-card__meta">${metric.display_value} / 目标 ${metric.target}</span>
+      </article>
+    `);
+    renderTextList(els.intelMetrics, metrics, "intel-metric-card", "等待传感器数据...");
+
+    const directionText = {
+      rising: "上升",
+      falling: "下降",
+      stable: "平稳",
+      unknown: "未知",
+    };
+    const trends = (diagnosis.trends || []).map((trend) => `
+      <article class="intel-trend-chip intel-trend-chip--${trend.direction || "unknown"}">
+        <span class="intel-trend-chip__label">${trend.label}</span>
+        <strong>${directionText[trend.direction] || "未知"}</strong>
+        <span>${trend.text || "历史数据不足"}</span>
+      </article>
+    `);
+    renderTextList(els.intelTrends, trends, "intel-trend-chip", "历史趋势计算中...");
+
+    const alerts = (diagnosis.alerts || []).map((alert) => `
+      <article class="intel-list-item intel-list-item--${alert.severity || "low"}">
+        <strong>${alert.title}</strong>
+        <span>${alert.detail}</span>
+      </article>
+    `);
+    renderTextList(els.intelAlerts, alerts, "intel-list-item", "当前没有明显异常告警。");
+
+    const recommendations = (diagnosis.recommendations || []).map((text) => `
+      <article class="intel-list-item intel-list-item--recommendation">
+        <strong>推荐动作</strong>
+        <span>${text}</span>
+      </article>
+    `);
+    renderTextList(els.intelRecommendations, recommendations, "intel-list-item", "等待策略建议...");
+  }
+
   function showWateringToast() {
     if (!els.wateringToast) return;
 
@@ -83,6 +170,19 @@
       });
       els.updateTime.textContent = "连接失败";
       updateCloudBadge(false);
+    }
+  }
+
+  async function refreshDiagnosis() {
+    try {
+      const result = await EdgeApp.fetchJson(api.intelligence);
+      renderDiagnosis(result);
+    } catch (error) {
+      console.error("获取智能诊断失败:", error);
+      els.intelBadge.className = "pill-status pill-status--error";
+      els.intelBadge.textContent = "AI 诊断获取失败";
+      els.intelSummary.textContent = "智能诊断服务暂不可用";
+      els.intelDecisionReason.textContent = error.message;
     }
   }
 
@@ -132,6 +232,7 @@
 
   async function askAssistant() {
     els.aiResponse.classList.add("result-box--visible");
+    setAiModeBadge("heuristic");
     els.aiText.textContent = "正在唤醒 Qwen 本地模型进行推理...";
     els.askAiBtn.disabled = true;
     try {
@@ -142,6 +243,7 @@
         }),
       });
       if (result.status !== "success") throw new Error(result.message || "大模型推理失败");
+      setAiModeBadge(result.mode);
       els.aiText.innerHTML = result.answer.replace(/\n/g, "<br>");
     } catch (error) {
       console.error("AI 助手失败:", error);
@@ -201,6 +303,12 @@
         if (state.last_reason) {
           els.policyStatus.textContent += `，上次触发原因: ${state.last_reason}`;
         }
+        if (state.effective_threshold != null) {
+          els.policyStatus.textContent += `，动态阈值 ${state.effective_threshold}%`;
+        }
+        if (state.decision_hint) {
+          els.policyStatus.textContent += `，当前判断: ${state.decision_hint}`;
+        }
         setPolicyLiveBanner({ active: false, text: "自动浇水待机中" });
       }
       const feedback = state.actuator_feedback || {};
@@ -227,8 +335,10 @@
   document.getElementById("ask-ai-btn").addEventListener("click", askAssistant);
 
   fetchData();
+  refreshDiagnosis();
   loadPolicy();
   refreshPolicyStatus();
   setInterval(fetchData, 1000);
+  setInterval(refreshDiagnosis, 5000);
   setInterval(refreshPolicyStatus, 1000);
 })();

@@ -33,20 +33,63 @@ class LocalLLMService:
             print("Qwen 模型加载完成！")
         return self._model
 
-    def answer(self, env_data: dict, user_msg: str) -> str:
-        model = self.get_model()
-        if not model:
-            raise RuntimeError("模型加载失败。")
+    def respond(self, env_data: dict, user_msg: str, diagnosis: dict | None = None) -> dict:
+        if self.available:
+            try:
+                model = self.get_model()
+                if model:
+                    prompt = self._build_prompt(env_data, user_msg, diagnosis or {})
+                    response = model(prompt, max_tokens=180, stop=["<|im_end|>"], echo=False)
+                    return {
+                        "mode": "llm",
+                        "answer": response["choices"][0]["text"].strip(),
+                    }
+            except Exception as exc:
+                print(f"LLM 推理失败，自动降级到规则引擎: {exc}")
 
-        prompt = (
+        return {
+            "mode": "heuristic",
+            "answer": self._build_rule_based_answer(env_data, diagnosis or {}),
+        }
+
+    def answer(self, env_data: dict, user_msg: str, diagnosis: dict | None = None) -> str:
+        return self.respond(env_data, user_msg, diagnosis=diagnosis)["answer"]
+
+    def _build_prompt(self, env_data: dict, user_msg: str, diagnosis: dict) -> str:
+        alerts = "；".join(item["title"] for item in diagnosis.get("alerts", [])[:3]) or "无明显异常"
+        recommendations = "；".join(diagnosis.get("recommendations", [])[:3]) or "保持当前策略"
+        irrigation = diagnosis.get("irrigation_decision", {})
+        return (
             f"<|im_start|>system\n"
-            f"你是一个专业的藏红花种植AI助手。请根据以下当前环境数据回答问题，要求语言简明扼要，控制在100字以内。\n"
+            f"你是一个专业的藏红花种植AI助手。"
+            f"请根据实时环境与规则引擎诊断回答问题，给出明确判断与动作建议，"
+            f"语言简明扼要，控制在120字以内。\n"
             f"当前温度:{env_data.get('temperature', '未知')}℃, "
             f"湿度:{env_data.get('humidity', '未知')}%, "
             f"光照:{env_data.get('lux', '未知')}lux, "
-            f"土壤湿度:{env_data.get('soil', '未知')}%。<|im_end|>\n"
+            f"土壤湿度:{env_data.get('soil', '未知')}%。\n"
+            f"规则引擎评分:{diagnosis.get('overall_score', '未知')}分, "
+            f"风险等级:{diagnosis.get('risk_label', '未知')}。\n"
+            f"规则引擎摘要:{diagnosis.get('summary', '暂无')}。\n"
+            f"异常告警:{alerts}。\n"
+            f"建议动作:{recommendations}。\n"
+            f"动态浇水阈值:{irrigation.get('effective_threshold', '未知')}%, "
+            f"推荐浇水时长:{irrigation.get('recommended_duration', '未知')}秒, "
+            f"当前决策:{irrigation.get('reason', '暂无')}。<|im_end|>\n"
             f"<|im_start|>user\n{user_msg}<|im_end|>\n"
             f"<|im_start|>assistant\n"
         )
-        response = model(prompt, max_tokens=150, stop=["<|im_end|>"], echo=False)
-        return response["choices"][0]["text"].strip()
+
+    def _build_rule_based_answer(self, env_data: dict, diagnosis: dict) -> str:
+        summary = diagnosis.get("summary")
+        recommendations = diagnosis.get("recommendations", [])
+        if not summary:
+            summary = (
+                f"当前温度 {env_data.get('temperature', '未知')}℃，"
+                f"湿度 {env_data.get('humidity', '未知')}%，"
+                f"光照 {env_data.get('lux', '未知')}lux，"
+                f"土壤湿度 {env_data.get('soil', '未知')}%。"
+            )
+        if recommendations:
+            return f"{summary} 建议：{'；'.join(recommendations[:2])}"
+        return summary

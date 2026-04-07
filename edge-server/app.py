@@ -19,6 +19,7 @@ from config import (
 )
 from routes import register_routes
 from runtime import RuntimeState
+from services.agronomy_service import AgronomyService
 from services.camera_service import CameraService
 from services.device_service import DeviceService
 from services.llm_service import LocalLLMService
@@ -36,12 +37,14 @@ def create_app():
     auth = AuthManager(db, SECRET_KEY, TOKEN_MAX_AGE, ADMIN_TOKEN)
     cloud_sync_service = CloudSyncService(CLOUD_MQTT_IP, MQTT_TOPIC)
     llm_service = LocalLLMService(LLM_MODEL_PATH)
+    agronomy_service = AgronomyService()
     camera_service = CameraService(CAPTURES_DIR)
     vision_service = VisionService(ANALYSIS_DIR)
     device_service = DeviceService(
         db_module=db,
         runtime_state=runtime_state,
         cloud_sync_service=cloud_sync_service,
+        agronomy_service=agronomy_service,
         device_id=db_device_id,
         serial_port=SERIAL_PORT,
         baud_rate=SERIAL_BAUD_RATE,
@@ -56,6 +59,7 @@ def create_app():
         camera_service=camera_service,
         vision_service=vision_service,
         llm_service=llm_service,
+        agronomy_service=agronomy_service,
         device_service=device_service,
         require_admin_for_control=REQUIRE_ADMIN_FOR_CONTROL,
         admin_token=ADMIN_TOKEN,
@@ -67,6 +71,7 @@ def create_app():
         "runtime_state": runtime_state,
         "cloud_sync_service": cloud_sync_service,
         "llm_service": llm_service,
+        "agronomy_service": agronomy_service,
         "camera_service": camera_service,
         "vision_service": vision_service,
         "device_service": device_service,

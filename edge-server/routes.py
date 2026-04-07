@@ -8,7 +8,7 @@ import db
 
 
 def register_routes(app, *, auth, runtime_state, camera_service, vision_service, llm_service, device_service,
-                    require_admin_for_control, admin_token, db_device_id):
+                    agronomy_service, require_admin_for_control, admin_token, db_device_id):
     def normalize_start_end(start_value, end_value):
         def norm_one(value, is_start):
             if not value:
@@ -24,6 +24,18 @@ def register_routes(app, *, auth, runtime_state, camera_service, vision_service,
         if raw_value is None:
             return db_device_id
         return int(raw_value)
+
+    def build_diagnosis(device_id: int):
+        current_data = runtime_state.snapshot_latest_data()
+        history_rows = db.query_sensor_history(device_id=device_id, limit=36)
+        policy = db.get_irrigation_policy(device_id) or {}
+        irrigation_state = runtime_state.snapshot_irrigation_state()
+        return agronomy_service.build_diagnosis(
+            current_data=current_data,
+            history_rows=history_rows,
+            policy=policy,
+            irrigation_state=irrigation_state,
+        )
 
     @app.route("/")
     def index():
@@ -74,14 +86,18 @@ def register_routes(app, *, auth, runtime_state, camera_service, vision_service,
 
     @app.route("/api/v1/assistant", methods=["POST"])
     def ai_assistant():
-        if not llm_service.available:
-            return jsonify({"status": "error", "message": "LLM未配置或模型文件不存在。"}), 503
         try:
             env_data = runtime_state.snapshot_latest_data()
             payload = request.get_json() or {}
             user_msg = payload.get("message", "请简短评估当前环境是否适合藏红花生长，并给出建议。")
-            answer = llm_service.answer(env_data, user_msg)
-            return jsonify({"status": "success", "answer": answer})
+            diagnosis = build_diagnosis(db_device_id)
+            response = llm_service.respond(env_data, user_msg, diagnosis=diagnosis)
+            return jsonify({
+                "status": "success",
+                "answer": response["answer"],
+                "mode": response["mode"],
+                "diagnosis_summary": diagnosis["summary"],
+            })
         except Exception as exc:
             return jsonify({"status": "error", "message": str(exc)}), 500
 
@@ -150,6 +166,15 @@ def register_routes(app, *, auth, runtime_state, camera_service, vision_service,
         data = runtime_state.snapshot_latest_data()
         data["cloud_ok"] = device_service.cloud_sync_service.cloud_sync_ok
         return jsonify(data)
+
+    @app.route("/api/v1/intelligence/diagnosis", methods=["GET"])
+    def get_intelligence_diagnosis():
+        try:
+            device_id = parse_device_id(request.args.get("device_id"))
+        except Exception:
+            return jsonify({"error": "invalid device_id"}), 400
+        diagnosis = build_diagnosis(device_id)
+        return jsonify({"status": "success", **diagnosis})
 
     @app.route("/api/v1/sensors/history", methods=["GET"])
     def get_sensor_history():

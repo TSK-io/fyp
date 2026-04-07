@@ -82,6 +82,58 @@
         </div>
       </section>
 
+      <section class="page-section">
+        <article class="panel intelligence-panel">
+          <div class="intelligence-panel__header">
+            <div>
+              <h2 class="section-heading">智能诊断中枢</h2>
+              <p class="panel-intro">将实时数据、历史趋势与灌溉策略合并分析，输出更像专家系统的预警与动作建议。</p>
+            </div>
+            <span id="intel-badge" class="pill-status">AI 诊断同步中...</span>
+          </div>
+
+          <div class="intelligence-overview">
+            <article class="intelligence-score-card">
+              <span class="intelligence-score-card__label">综合健康分</span>
+              <strong id="intel-score" class="intelligence-score-card__value">--</strong>
+              <span id="intel-risk" class="intelligence-score-card__risk">等待分析</span>
+              <p id="intel-summary" class="intelligence-score-card__summary">系统正在收集足够的环境上下文。</p>
+            </article>
+
+            <article class="intelligence-decision-card">
+              <h3>动态灌溉决策</h3>
+              <div class="intelligence-decision-card__row">
+                <span>动态阈值</span>
+                <strong id="intel-threshold">--</strong>
+              </div>
+              <div class="intelligence-decision-card__row">
+                <span>推荐时长</span>
+                <strong id="intel-duration">--</strong>
+              </div>
+              <div class="intelligence-decision-card__row">
+                <span>当前动作</span>
+                <strong id="intel-action">--</strong>
+              </div>
+              <p id="intel-decision-reason" class="status-text">等待决策结果...</p>
+            </article>
+          </div>
+
+          <div id="intel-metrics" class="intelligence-metrics"></div>
+          <div id="intel-trends" class="intelligence-trends"></div>
+
+          <div class="intelligence-columns">
+            <section>
+              <h3>关键预警</h3>
+              <div id="intel-alerts" class="intelligence-list"></div>
+            </section>
+            <section>
+              <h3>推荐动作</h3>
+              <div id="intel-recommendations" class="intelligence-list"></div>
+            </section>
+          </div>
+        </article>
+      </section>
+
       <section class="page-section dashboard-grid">
         <article class="panel control-panel">
           <h2 class="section-heading">边缘设备与 AI 控制</h2>
@@ -111,6 +163,7 @@
 
           <div id="ai-response" class="result-box">
             <h3>边缘端大模型建议</h3>
+            <div id="ai-mode-badge" class="pill-status">分析模式待定</div>
             <div id="ai-text">推理计算中...</div>
           </div>
         </article>

@@ -7,10 +7,12 @@ import serial
 
 
 class DeviceService:
-    def __init__(self, db_module, runtime_state, cloud_sync_service, device_id: int, serial_port: str, baud_rate: int):
+    def __init__(self, db_module, runtime_state, cloud_sync_service, agronomy_service,
+                 device_id: int, serial_port: str, baud_rate: int):
         self.db = db_module
         self.runtime_state = runtime_state
         self.cloud_sync_service = cloud_sync_service
+        self.agronomy_service = agronomy_service
         self.device_id = device_id
         self.serial_port = serial_port
         self.baud_rate = baud_rate
@@ -123,30 +125,52 @@ class DeviceService:
             try:
                 policy = self.db.get_irrigation_policy(self.device_id)
                 if not policy or not policy.get("enabled"):
+                    self.runtime_state.update_irrigation_decision(
+                        effective_threshold=None,
+                        recommended_duration=None,
+                        decision_hint="自动灌溉策略已关闭",
+                    )
                     time.sleep(poll_interval)
                     continue
 
-                threshold = policy.get("soil_threshold_min")
                 duration = policy.get("watering_seconds")
                 cooldown = policy.get("cooldown_seconds") or 0
-                if threshold is None or duration is None or duration <= 0:
+                if duration is None or duration <= 0:
+                    self.runtime_state.update_irrigation_decision(
+                        effective_threshold=policy.get("soil_threshold_min"),
+                        recommended_duration=duration,
+                        decision_hint="浇水时长未配置，暂不执行自动浇水",
+                    )
                     time.sleep(poll_interval)
                     continue
 
                 cooldown = int(cooldown)
                 if self._in_cooldown(cooldown):
+                    self.runtime_state.update_irrigation_decision(
+                        effective_threshold=self.runtime_state.auto_irrigation_state.get("effective_threshold"),
+                        recommended_duration=self.runtime_state.auto_irrigation_state.get("recommended_duration"),
+                        decision_hint="处于冷却期，暂缓再次浇水",
+                    )
                     time.sleep(poll_interval)
                     continue
 
-                soil = self.runtime_state.snapshot_latest_data().get("soil")
-                if soil is None:
-                    time.sleep(poll_interval)
-                    continue
-
-                irrigation_state = self.runtime_state.auto_irrigation_state
-                if soil < threshold and not irrigation_state["watering"]:
-                    irrigation_state["last_reason"] = f"土壤湿度 {soil}% 低于阈值 {threshold}%"
-                    self._run_irrigation_cycle(int(duration))
+                latest_data = self.runtime_state.snapshot_latest_data()
+                history_rows = self.db.query_sensor_history(device_id=self.device_id, limit=24)
+                irrigation_state = self.runtime_state.snapshot_irrigation_state()
+                decision = self.agronomy_service.plan_irrigation(
+                    current_data=latest_data,
+                    history_rows=history_rows,
+                    policy=policy,
+                    irrigation_state=irrigation_state,
+                )
+                self.runtime_state.update_irrigation_decision(
+                    effective_threshold=decision.get("effective_threshold"),
+                    recommended_duration=decision.get("recommended_duration"),
+                    last_reason=decision.get("reason"),
+                    decision_hint=decision.get("reason"),
+                )
+                if decision.get("allowed") and decision.get("should_water") and not irrigation_state["watering"]:
+                    self._run_irrigation_cycle(int(decision.get("recommended_duration") or duration), decision.get("reason"))
                 time.sleep(poll_interval)
             except Exception:
                 time.sleep(poll_interval)
@@ -161,7 +185,7 @@ class DeviceService:
         except Exception:
             return False
 
-    def _run_irrigation_cycle(self, duration: int):
+    def _run_irrigation_cycle(self, duration: int, reason: str | None = None):
         irrigation_state = self.runtime_state.auto_irrigation_state
         command_on = json.dumps({"actuator": "pump", "action": "on"})
         success_on = self.send_command(command_on)
@@ -170,6 +194,9 @@ class DeviceService:
 
         irrigation_state["watering"] = True
         irrigation_state["last_start_ts"] = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
+        irrigation_state["last_reason"] = reason
+        irrigation_state["recommended_duration"] = duration
+        irrigation_state["decision_hint"] = reason
         time.sleep(duration)
 
         command_off = json.dumps({"actuator": "pump", "action": "off"})

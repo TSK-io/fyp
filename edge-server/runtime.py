@@ -18,6 +18,9 @@ class RuntimeState:
         "last_start_ts": None,
         "last_end_ts": None,
         "last_reason": None,
+        "effective_threshold": None,
+        "recommended_duration": None,
+        "decision_hint": "等待智能决策",
     })
     actuator_feedback: dict = field(default_factory=lambda: {
         "actuator": None,
@@ -39,6 +42,15 @@ class RuntimeState:
 
     def snapshot_irrigation_state(self) -> dict:
         return self.auto_irrigation_state.copy()
+
+    def update_irrigation_decision(self, *, effective_threshold=None, recommended_duration=None,
+                                   last_reason=None, decision_hint=None):
+        self.auto_irrigation_state.update({
+            "effective_threshold": effective_threshold,
+            "recommended_duration": recommended_duration,
+            "last_reason": last_reason,
+            "decision_hint": decision_hint,
+        })
 
     def update_actuator_feedback(self, *, actuator=None, action=None, success=None, message=None):
         self.actuator_feedback.update({
