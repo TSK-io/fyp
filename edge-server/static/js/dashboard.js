@@ -32,6 +32,7 @@
     adminToken: document.getElementById("admin-token"),
     policyMsg: document.getElementById("policy-msg"),
     policyStatus: document.getElementById("policy-status"),
+    actuatorStatus: document.getElementById("actuator-status"),
   };
 
   function setControlStatus(message) {
@@ -166,8 +167,16 @@
       els.policyStatus.textContent = state.watering
         ? `正在灌溉，开始于 ${state.last_start_ts || ""}`
         : `待机监控中，上次执行 ${state.last_end_ts || "未知"}`;
+      if (!state.watering && state.last_reason) {
+        els.policyStatus.textContent += `，触发原因: ${state.last_reason}`;
+      }
+      const feedback = state.actuator_feedback || {};
+      els.actuatorStatus.textContent = feedback.timestamp
+        ? `${feedback.message || "状态已更新"} (${feedback.timestamp})`
+        : "等待执行器状态更新";
     } catch (error) {
       els.policyStatus.textContent = "边缘服务连接异常";
+      els.actuatorStatus.textContent = "执行器状态获取失败";
     }
   }
 

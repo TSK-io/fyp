@@ -140,6 +140,30 @@ def ensure_default_device(name: str = 'stm32_device_1') -> int:
         return conn.execute('SELECT id FROM devices WHERE name=?', (name,)).fetchone()['id']
 
 
+def ensure_default_irrigation_policy(device_id: int,
+                                     enabled: int = 1,
+                                     soil_threshold_min: float = 30.0,
+                                     watering_seconds: int = 8,
+                                     cooldown_seconds: int = 60):
+    conn = _connect()
+    with _db_lock:
+        row = conn.execute(
+            'SELECT id FROM irrigation_policies WHERE device_id=? ORDER BY id DESC LIMIT 1',
+            (device_id,),
+        ).fetchone()
+        if row:
+            return row['id']
+        conn.execute(
+            'INSERT INTO irrigation_policies(device_id, enabled, soil_threshold_min, watering_seconds, cooldown_seconds) VALUES (?, ?, ?, ?, ?)',
+            (device_id, int(enabled), soil_threshold_min, watering_seconds, cooldown_seconds),
+        )
+        conn.commit()
+        return conn.execute(
+            'SELECT id FROM irrigation_policies WHERE device_id=? ORDER BY id DESC LIMIT 1',
+            (device_id,),
+        ).fetchone()['id']
+
+
 def update_device_last_seen(device_id: int):
     conn = _connect()
     with _db_lock:

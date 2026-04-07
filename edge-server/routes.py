@@ -200,7 +200,9 @@ def register_routes(app, *, auth, runtime_state, camera_service, vision_service,
 
     @app.route("/api/v1/policy/irrigation/status", methods=["GET"])
     def get_auto_irrigation_status():
-        return jsonify(runtime_state.snapshot_irrigation_state())
+        state = runtime_state.snapshot_irrigation_state()
+        state["actuator_feedback"] = runtime_state.snapshot_actuator_feedback()
+        return jsonify(state)
 
     @app.route("/api/v1/sensors/history.csv", methods=["GET"])
     def get_sensor_history_csv():

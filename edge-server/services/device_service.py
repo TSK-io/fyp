@@ -77,7 +77,11 @@ class DeviceService:
             actuator = parsed.get("actuator")
             action = parsed.get("action")
         except Exception:
-            pass
+            legacy_map = {
+                "led_on": ("status_led", "on"),
+                "led_off": ("status_led", "off"),
+            }
+            actuator, action = legacy_map.get(command, (None, None))
 
         with self.runtime_state.serial_lock:
             if self.serial_conn and self.serial_conn.is_open:
@@ -93,6 +97,17 @@ class DeviceService:
                 self.db.update_device_last_seen(self.device_id)
         except Exception:
             pass
+        message = (
+            f"执行器 {actuator or 'unknown'} 已切换为 {action or 'unknown'}"
+            if success else
+            f"执行器 {actuator or 'unknown'} 指令发送失败"
+        )
+        self.runtime_state.update_actuator_feedback(
+            actuator=actuator,
+            action=action,
+            success=success,
+            message=message,
+        )
         return success
 
     def irrigation_worker(self):
@@ -123,6 +138,7 @@ class DeviceService:
 
                 irrigation_state = self.runtime_state.auto_irrigation_state
                 if soil < threshold and not irrigation_state["watering"]:
+                    irrigation_state["last_reason"] = f"土壤湿度 {soil}% 低于阈值 {threshold}%"
                     self._run_irrigation_cycle(int(duration))
                 time.sleep(poll_interval)
             except Exception:

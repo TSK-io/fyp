@@ -1,5 +1,6 @@
 import threading
 from dataclasses import dataclass, field
+from datetime import datetime
 
 
 @dataclass
@@ -16,6 +17,14 @@ class RuntimeState:
         "watering": False,
         "last_start_ts": None,
         "last_end_ts": None,
+        "last_reason": None,
+    })
+    actuator_feedback: dict = field(default_factory=lambda: {
+        "actuator": None,
+        "action": None,
+        "success": None,
+        "message": "等待执行器状态更新",
+        "timestamp": None,
     })
     data_lock: threading.Lock = field(default_factory=threading.Lock)
     serial_lock: threading.Lock = field(default_factory=threading.Lock)
@@ -30,3 +39,15 @@ class RuntimeState:
 
     def snapshot_irrigation_state(self) -> dict:
         return self.auto_irrigation_state.copy()
+
+    def update_actuator_feedback(self, *, actuator=None, action=None, success=None, message=None):
+        self.actuator_feedback.update({
+            "actuator": actuator,
+            "action": action,
+            "success": success,
+            "message": message,
+            "timestamp": datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S"),
+        })
+
+    def snapshot_actuator_feedback(self) -> dict:
+        return self.actuator_feedback.copy()

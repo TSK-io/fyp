@@ -30,6 +30,7 @@ def create_app():
     ensure_runtime_dirs()
     db.create_tables()
     db_device_id = db.ensure_default_device()
+    db.ensure_default_irrigation_policy(db_device_id)
 
     runtime_state = RuntimeState()
     auth = AuthManager(db, SECRET_KEY, TOKEN_MAX_AGE, ADMIN_TOKEN)
