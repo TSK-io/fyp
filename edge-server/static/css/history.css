@@ -1,0 +1,54 @@
+.history-filters {
+  padding: 22px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  align-items: end;
+}
+
+.history-filters .field {
+  min-width: 190px;
+}
+
+.history-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.history-status {
+  margin-left: auto;
+  align-self: center;
+}
+
+.chart-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.chart-panel {
+  padding: 20px;
+}
+
+.chart-panel__canvas {
+  height: 380px;
+}
+
+.history-note {
+  margin-top: 18px;
+  padding: 16px 20px;
+  color: var(--shell-muted);
+  font-size: 13px;
+}
+
+@media (max-width: 980px) {
+  .chart-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .history-status {
+    margin-left: 0;
+    width: 100%;
+  }
+}

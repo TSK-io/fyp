@@ -1,0 +1,235 @@
+:root {
+  --shell-bg: #f4efe6;
+  --shell-surface: rgba(255, 251, 245, 0.9);
+  --shell-surface-strong: #fffdf8;
+  --shell-text: #2b241d;
+  --shell-muted: #726457;
+  --shell-border: rgba(82, 60, 39, 0.12);
+  --shell-shadow: 0 20px 50px rgba(74, 53, 33, 0.12);
+  --shell-radius: 24px;
+  --shell-accent: #c96f2d;
+  --shell-accent-strong: #8e3b12;
+  --shell-accent-soft: #f7d7b8;
+  --shell-success: #2d7b55;
+  --shell-danger: #b64b3f;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+}
+
+body {
+  font-family: "Manrope", sans-serif;
+  color: var(--shell-text);
+  background:
+    radial-gradient(circle at top left, rgba(221, 178, 120, 0.35), transparent 30%),
+    radial-gradient(circle at top right, rgba(191, 118, 81, 0.18), transparent 25%),
+    linear-gradient(180deg, #fbf6ef 0%, var(--shell-bg) 100%);
+}
+
+a {
+  color: inherit;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+.app-page {
+  min-height: 100vh;
+  padding: 24px;
+}
+
+.app-shell {
+  max-width: 1240px;
+  margin: 0 auto;
+}
+
+.topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  padding: 18px 22px;
+  border: 1px solid var(--shell-border);
+  border-radius: var(--shell-radius);
+  background: rgba(255, 252, 247, 0.74);
+  backdrop-filter: blur(16px);
+  box-shadow: var(--shell-shadow);
+  position: sticky;
+  top: 18px;
+  z-index: 10;
+}
+
+.topbar__title {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+}
+
+.topbar__subtitle {
+  margin: 6px 0 0;
+  color: var(--shell-muted);
+  font-size: 13px;
+}
+
+.topbar__links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.topbar__links a {
+  text-decoration: none;
+  border-radius: 999px;
+  padding: 10px 16px;
+  border: 1px solid var(--shell-border);
+  color: var(--shell-accent-strong);
+  background: rgba(255, 245, 235, 0.9);
+  transition: transform 0.2s ease, background 0.2s ease;
+}
+
+.topbar__links a:hover {
+  transform: translateY(-1px);
+  background: #fff3e6;
+}
+
+.page-section {
+  margin-top: 22px;
+}
+
+.panel {
+  border: 1px solid var(--shell-border);
+  border-radius: var(--shell-radius);
+  background: var(--shell-surface);
+  box-shadow: var(--shell-shadow);
+}
+
+.section-heading {
+  margin: 0 0 14px;
+  font-size: 17px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.pill-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  font-size: 13px;
+  border: 1px solid var(--shell-border);
+  color: var(--shell-muted);
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.pill-status--ok {
+  color: #145c3e;
+  background: rgba(196, 239, 214, 0.95);
+  border-color: rgba(45, 123, 85, 0.3);
+}
+
+.pill-status--error {
+  color: #7d251d;
+  background: rgba(249, 214, 210, 0.95);
+  border-color: rgba(182, 75, 63, 0.28);
+}
+
+.button {
+  border: none;
+  border-radius: 14px;
+  padding: 12px 18px;
+  cursor: pointer;
+  transition: transform 0.18s ease, opacity 0.18s ease, box-shadow 0.18s ease;
+  color: #fff;
+  box-shadow: 0 14px 30px rgba(89, 49, 24, 0.15);
+}
+
+.button:hover {
+  transform: translateY(-1px);
+}
+
+.button:disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.button--primary {
+  background: linear-gradient(135deg, #cf7b32, #ad4d1a);
+}
+
+.button--secondary {
+  background: linear-gradient(135deg, #537d6d, #31584c);
+}
+
+.button--danger {
+  background: linear-gradient(135deg, #c76559, #a33e36);
+}
+
+.button--ghost {
+  color: var(--shell-text);
+  background: linear-gradient(135deg, #f5ede3, #e6dacb);
+}
+
+.status-text {
+  min-height: 20px;
+  color: var(--shell-muted);
+  font-size: 14px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.field label {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--shell-muted);
+}
+
+.field input {
+  width: 100%;
+  border: 1px solid rgba(104, 83, 62, 0.18);
+  background: rgba(255, 255, 255, 0.82);
+  border-radius: 14px;
+  padding: 12px 14px;
+  outline: none;
+}
+
+.field input:focus {
+  border-color: rgba(201, 111, 45, 0.42);
+  box-shadow: 0 0 0 4px rgba(201, 111, 45, 0.12);
+}
+
+@media (max-width: 760px) {
+  .app-page {
+    padding: 14px;
+  }
+
+  .topbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .topbar__links {
+    width: 100%;
+  }
+
+  .topbar__links a {
+    text-align: center;
+    flex: 1 1 0;
+  }
+}

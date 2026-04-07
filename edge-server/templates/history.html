@@ -1,175 +1,65 @@
-<!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>历史趋势 - 藏红花培育系统</title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-  <style>
-    :root { --primary: #3b82f6; --bg: #f8fafc; --surface: #ffffff; --text: #1e293b; --border: #e2e8f0; }
-    body { font-family: 'Inter', sans-serif; margin: 0; background: var(--bg); color: var(--text); padding-bottom: 40px;}
-    .navbar { background: var(--surface); color: var(--text); padding: 16px 24px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 10; box-shadow: 0 1px 3px rgba(0,0,0,0.05);}
-    .navbar h1 { margin: 0; font-size: 18px; font-weight: 600; display: flex; align-items: center; gap: 8px;}
-    .nav-links a { color: var(--primary); text-decoration: none; margin-left: 16px; font-size: 14px; font-weight: 500; }
-    .nav-links a:hover { text-decoration: underline; }
-    
-    .container { max-width: 1200px; margin: 24px auto; padding: 0 20px; }
-    
-    .filters-card { background: var(--surface); padding: 16px 20px; border-radius: 12px; border: 1px solid var(--border); display: flex; flex-wrap: wrap; gap: 16px; align-items: center; margin-bottom: 24px; box-shadow: 0 1px 2px rgba(0,0,0,0.05);}
-    .filter-group { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 500;}
-    input[type="datetime-local"], input[type="number"] { padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 6px; font-family: 'Inter'; font-size: 14px; outline: none; }
-    input:focus { border-color: var(--primary); }
-    button { background: var(--primary); color: white; border: none; padding: 8px 16px; border-radius: 6px; font-weight: 500; cursor: pointer; transition: background 0.2s; }
-    button:hover { background: #2563eb; }
-    #export { background: #10b981; } #export:hover { background: #059669; }
-    #status { font-size: 13px; color: #64748b; margin-left: auto; }
-    
-    .grid { display: grid; gap: 24px; grid-template-columns: 1fr; }
-    @media (min-width: 960px) { .grid { grid-template-columns: 1fr 1fr; } }
-    .chart-card { background: var(--surface); border-radius: 16px; border: 1px solid var(--border); box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); padding: 20px; }
-    .chart-card h3 { margin: 0 0 16px; font-size: 16px; color: #475569; font-weight: 600;}
-    
-    .note { margin-top: 24px; text-align: center; font-size: 13px; color: #94a3b8; }
-  </style>
+{% extends "base.html" %}
+
+{% block title %}历史趋势 - 藏红花培育系统{% endblock %}
+
+{% block head_assets %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/history.css') }}">
   <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-</head>
-<body>
-  <header class="navbar">
-    <h1>环境时序数据追溯</h1>
-    <div class="nav-links">
-      <a href="/">← 返回实时界面</a>
-      <a href="/admin">后台管理</a>
+{% endblock %}
+
+{% block body %}
+  <div class="app-page">
+    <div class="app-shell">
+      <header class="topbar">
+        <div>
+          <h1 class="topbar__title">环境时序数据追溯</h1>
+          <p class="topbar__subtitle">图表页只负责结构，查询和渲染逻辑已经独立到页面脚本。</p>
+        </div>
+        <nav class="topbar__links">
+          <a href="/">实时界面</a>
+          <a href="/admin">后台管理</a>
+          <a href="/login">账号登录</a>
+        </nav>
+      </header>
+
+      <section class="page-section panel history-filters">
+        <div class="field">
+          <label for="start">开始时间</label>
+          <input id="start" type="datetime-local">
+        </div>
+        <div class="field">
+          <label for="end">结束时间</label>
+          <input id="end" type="datetime-local">
+        </div>
+        <div class="field">
+          <label for="limit">拉取条数</label>
+          <input id="limit" type="number" min="10" max="1000" step="10" value="200">
+        </div>
+        <div class="history-actions">
+          <button id="load" class="button button--primary">立即查询</button>
+          <button id="export" class="button button--secondary">导出 CSV</button>
+        </div>
+        <div id="status" class="status-text history-status">系统就绪</div>
+      </section>
+
+      <section class="page-section chart-grid">
+        <article class="panel chart-panel">
+          <h2 class="section-heading">温湿度交变趋势</h2>
+          <div id="chart-th" class="chart-panel__canvas"></div>
+        </article>
+        <article class="panel chart-panel">
+          <h2 class="section-heading">光照与土壤水分趋势</h2>
+          <div id="chart-ls" class="chart-panel__canvas"></div>
+        </article>
+      </section>
+
+      <section class="page-section panel history-note">
+        若时间范围为空，系统默认回放最近 N 条传感记录。报表每 10 秒自动刷新，灌溉区间也会叠加在土壤趋势图中。
+      </section>
     </div>
-  </header>
+  </div>
+{% endblock %}
 
-  <main class="container">
-    <div class="filters-card">
-      <div class="filter-group">
-        <label>时段</label>
-        <input id="start" type="datetime-local" />
-        <span>至</span>
-        <input id="end" type="datetime-local" />
-      </div>
-      <div class="filter-group">
-        <label>拉取条数</label>
-        <input id="limit" type="number" min="10" max="1000" step="10" value="200" style="width: 80px;" />
-      </div>
-      <button id="load">立即查询</button>
-      <button id="export">导出 CSV</button>
-      <span id="status">系统就绪</span>
-    </div>
-
-    <div class="grid">
-      <div class="chart-card">
-        <h3>温湿度交变趋势</h3>
-        <div id="chart-th" style="height: 380px;"></div>
-      </div>
-      <div class="chart-card">
-        <h3>光照与土壤水分趋势</h3>
-        <div id="chart-ls" style="height: 380px;"></div>
-      </div>
-    </div>
-    
-    <p class="note">提示：若时间范围为空，系统将默认回放最近 N 条传感记录。报表大屏每 10 秒自动无感刷新。</p>
-  </main>
-
-  <script>
-    const api = { history: '/api/v1/sensors/history' };
-    const el = (id) => document.getElementById(id);
-    const thChart = echarts.init(el('chart-th'));
-    const lsChart = echarts.init(el('chart-ls'));
-
-    function dtLocalToQuery(v) { if (!v) return ''; return v.replace('T', ' '); }
-
-    async function loadData() {
-      const s = dtLocalToQuery(el('start').value), e = dtLocalToQuery(el('end').value);
-      const limit = Math.max(10, Math.min(1000, parseInt(el('limit').value || '200')));
-      const qs = new URLSearchParams();
-      if (s) qs.set('start', s); if (e) qs.set('end', e); qs.set('limit', String(limit));
-
-      el('status').textContent = '数据云端拉取中...';
-      try {
-        const resp = await fetch(`${api.history}?${qs.toString()}`);
-        if (!resp.ok) throw new Error('HTTP ' + resp.status);
-        const json = await resp.json();
-        const items = json.items || [];
-        items.reverse();
-
-        const xs = items.map(r => r.timestamp);
-        const temp = items.map(r => r.temperature), humi = items.map(r => r.humidity);
-        const lux = items.map(r => r.lux), soil = items.map(r => r.soil);
-
-        thChart.setOption({
-          tooltip: { trigger: 'axis' },
-          legend: { data: ['温度(°C)','湿度(%)'], bottom: 0 },
-          grid: { left: '3%', right: '4%', bottom: '10%', containLabel: true },
-          xAxis: { type: 'category', data: xs, boundaryGap: false },
-          yAxis: [
-            { type: 'value', name: '温度(°C)' },
-            { type: 'value', name: '湿度(%)', splitLine: {show: false} }
-          ],
-          series: [
-            { name: '温度(°C)', type: 'line', data: temp, smooth: true, itemStyle:{color:'#ef4444'} },
-            { name: '湿度(%)', type: 'line', yAxisIndex: 1, data: humi, smooth: true, itemStyle:{color:'#3b82f6'}, areaStyle: {opacity:0.1} }
-          ]
-        });
-
-        let intervals = [];
-        try {
-          const logQs = new URLSearchParams();
-          if (s) logQs.set('start', s); if (e) logQs.set('end', e);
-          logQs.set('actuator', 'pump'); logQs.set('limit', '500');
-          const logsResp = await fetch('/api/v1/control/logs?' + logQs.toString());
-          if (logsResp.ok) {
-            const logsJson = await logsResp.json();
-            const logs = (logsJson.items || []).slice().reverse();
-            let currentStart = null;
-            for (const it of logs) {
-              if (it.action === 'on' && !currentStart) {
-                currentStart = it.created_at || it.timestamp || it.time || it.createdAt || it.ts;
-              } else if (it.action === 'off' && currentStart) {
-                const endTs = it.created_at || it.timestamp || it.time || it.createdAt || it.ts;
-                if (currentStart && endTs) {
-                  intervals.push([ { xAxis: currentStart }, { xAxis: endTs } ]);
-                }
-                currentStart = null;
-              }
-            }
-          }
-        } catch (err) { console.warn('加载灌溉日志失败', err); }
-
-        lsChart.setOption({
-          tooltip: { trigger: 'axis' },
-          legend: { data: ['光照(lux)','土壤(%)'], bottom: 0 },
-          grid: { left: '3%', right: '4%', bottom: '10%', containLabel: true },
-          xAxis: { type: 'category', data: xs, boundaryGap: false },
-          yAxis: [
-            { type: 'value', name: '光照(lux)' },
-            { type: 'value', name: '土壤(%)', splitLine: {show: false} }
-          ],
-          series: [
-            { name: '光照(lux)', type: 'line', data: lux, smooth: true, itemStyle:{color:'#f59e0b'} },
-            { name: '土壤(%)', type: 'line', yAxisIndex: 1, data: soil, smooth: true, itemStyle:{color:'#8b5cf6'},
-              markArea: intervals.length ? { itemStyle: { color: 'rgba(16,185,129,0.15)' }, data: intervals } : undefined
-            }
-          ]
-        });
-
-        el('status').textContent = `成功渲染 ${items.length} 个数据点`;
-      } catch (err) { el('status').textContent = '加载失败：' + err.message; }
-    }
-
-    el('export').addEventListener('click', () => {
-      const s = dtLocalToQuery(el('start').value), e = dtLocalToQuery(el('end').value);
-      const limit = Math.max(10, Math.min(1000, parseInt(el('limit').value || '200')));
-      const qs = new URLSearchParams();
-      if (s) qs.set('start', s); if (e) qs.set('end', e); qs.set('limit', String(limit));
-      window.open('/api/v1/sensors/history.csv?' + qs.toString(), '_blank');
-    });
-
-    el('load').addEventListener('click', loadData);
-    window.addEventListener('resize', () => { thChart.resize(); lsChart.resize(); });
-    loadData(); setInterval(loadData, 10000);
-  </script>
-</body>
-</html>
+{% block scripts %}
+  <script src="{{ url_for('static', filename='js/history.js') }}"></script>
+{% endblock %}

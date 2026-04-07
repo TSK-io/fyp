@@ -1,78 +1,44 @@
-<!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>登录 - 藏红花智能培育系统</title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-  <style>
-    :root { --primary: #10b981; --primary-hover: #059669; --bg: #ecfdf5; --surface: #ffffff; --text: #1f2937; --text-muted: #6b7280; }
-    body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; margin: 0; background: linear-gradient(135deg, var(--bg) 0%, #d1fae5 100%); min-height: 100vh; display: flex; align-items: center; justify-content: center; color: var(--text); }
-    .wrap { width: 100%; max-width: 400px; background: var(--surface); border-radius: 16px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04); overflow: hidden; margin: 20px; }
-    header { padding: 32px 24px 16px; text-align: center; }
-    header h1 { margin: 0; font-size: 24px; color: var(--primary); font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 8px; }
-    header p { margin: 8px 0 0; color: var(--text-muted); font-size: 14px; }
-    main { padding: 0 24px 24px; }
-    .form-group { margin-bottom: 16px; }
-    label { display: block; margin-bottom: 6px; font-size: 14px; font-weight: 500; color: #374151; }
-    input { width: 100%; box-sizing: border-box; padding: 12px 16px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 15px; transition: all 0.2s; outline: none; background: #f9fafb; }
-    input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.2); background: #fff; }
-    .actions { display: flex; gap: 12px; margin-top: 24px; }
-    button { flex: 1; padding: 12px; border: none; border-radius: 8px; font-size: 15px; font-weight: 500; cursor: pointer; transition: all 0.2s; }
-    #btn-login { background: var(--primary); color: white; }
-    #btn-login:hover { background: var(--primary-hover); transform: translateY(-1px); }
-    #btn-register { background: #f3f4f6; color: var(--text); }
-    #btn-register:hover { background: #e5e7eb; transform: translateY(-1px); }
-    .msg { text-align: center; margin-top: 16px; font-size: 14px; color: #ef4444; min-height: 20px; }
-    .nav { text-align: center; padding: 16px; background: #f9fafb; border-top: 1px solid #f3f4f6; font-size: 14px; }
-    .nav a { color: var(--primary); text-decoration: none; font-weight: 500; transition: color 0.2s; }
-    .nav a:hover { color: var(--primary-hover); }
-  </style>
-</head>
-<body>
-  <div class="wrap">
-    <header>
-      <h1>藏红花培育系统</h1>
-      <p>边缘智能监测与控制中枢</p>
-    </header>
-    <main>
-      <div class="form-group">
-        <label>用户名</label>
-        <input id="username" type="text" placeholder="首个注册用户将成为管理员" />
+{% extends "base.html" %}
+
+{% block title %}登录 - 藏红花智能培育系统{% endblock %}
+
+{% block body_class %}login-page{% endblock %}
+
+{% block head_assets %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/login.css') }}">
+{% endblock %}
+
+{% block body %}
+  <div class="app-page login-page">
+    <div class="panel login-card">
+      <div class="login-card__header">
+        <div class="login-card__eyebrow">Access Gateway</div>
+        <h1 class="login-card__title">登录到边缘控制中枢</h1>
+        <p class="login-card__desc">登录和注册流程已经从模板中拆出，后续要接入更完整的鉴权页时，只需要继续扩展页面脚本和表单组件。</p>
       </div>
-      <div class="form-group">
-        <label>密码</label>
-        <input id="password" type="password" placeholder="不少于 6 位建议" />
+      <div class="login-form">
+        <div class="field">
+          <label for="username">用户名</label>
+          <input id="username" type="text" placeholder="首个注册用户将成为管理员">
+        </div>
+        <div class="field">
+          <label for="password">密码</label>
+          <input id="password" type="password" placeholder="不少于 6 位建议">
+        </div>
+        <div class="login-actions">
+          <button id="btn-login" class="button button--primary">登录</button>
+          <button id="btn-register" class="button button--ghost">注册并登录</button>
+        </div>
+        <div id="msg" class="status-text"></div>
       </div>
-      <div class="actions">
-        <button id="btn-login">登 录</button>
-        <button id="btn-register">注册并登录</button>
+      <div class="login-links">
+        <a href="/">返回实时监控</a>
+        <a href="/admin">后台管理</a>
       </div>
-      <div id="msg" class="msg"></div>
-    </main>
-    <div class="nav">
-      <a href="/">← 返回实时监控</a> &nbsp;·&nbsp; <a href="/admin">后台管理</a>
     </div>
   </div>
+{% endblock %}
 
-  <script>
-    async function doLoginRegister(url){
-      const u = document.getElementById('username').value.trim();
-      const p = document.getElementById('password').value;
-      const msg = document.getElementById('msg'); msg.textContent='正在验证...';
-      try{
-        const r = await fetch(url, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({username:u, password:p})});
-        const js = await r.json();
-        if(!r.ok){ throw new Error(js.error||('HTTP '+r.status)); }
-        if(!js.token){ throw new Error('未返回令牌'); }
-        localStorage.setItem('auth_token', js.token);
-        msg.style.color = 'var(--primary)';
-        msg.textContent='登录成功，正在跳转...';
-        setTimeout(() => location.href = '/admin', 500);
-      }catch(e){ msg.style.color = '#ef4444'; msg.textContent='错误: '+e.message; }
-    }
-    document.getElementById('btn-login').addEventListener('click', ()=>doLoginRegister('/api/v1/auth/login'));
-    document.getElementById('btn-register').addEventListener('click', ()=>doLoginRegister('/api/v1/auth/register'));
-  </script>
-</body>
-</html>
+{% block scripts %}
+  <script src="{{ url_for('static', filename='js/login.js') }}"></script>
+{% endblock %}

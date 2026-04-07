@@ -1,334 +1,147 @@
-<!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>实时监控 - 藏红花培育系统</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <style>
-        :root { --primary: #10b981; --secondary: #3b82f6; --accent: #8b5cf6; --bg: #f3f4f6; --surface: #ffffff; --text: #1f2937; --text-light: #6b7280; --border: #e5e7eb; }
-        body { font-family: 'Inter', sans-serif; margin: 0; background-color: var(--bg); color: var(--text); padding-bottom: 40px; }
-        .navbar { background: var(--primary); color: white; padding: 16px 24px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); position: sticky; top: 0; z-index: 10; }
-        .navbar h1 { margin: 0; font-size: 20px; font-weight: 600; }
-        .nav-links a { color: white; text-decoration: none; margin-left: 16px; font-size: 14px; background: rgba(255,255,255,0.2); padding: 8px 16px; border-radius: 20px; transition: all 0.2s; }
-        .nav-links a:hover { background: rgba(255,255,255,0.3); }
-        
-        .container { max-width: 1000px; margin: 24px auto; padding: 0 20px; }
-        .section-title { font-size: 18px; font-weight: 600; margin: 32px 0 16px; color: #374151; display: flex; align-items: center; gap: 8px; }
-        
-        /* 传感器网格 */
-        .sensors-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; }
-        .data-card { background: var(--surface); padding: 20px; border-radius: 16px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); border: 1px solid var(--border); display: flex; flex-direction: column; align-items: flex-start; transition: transform 0.2s; }
-        .data-card:hover { transform: translateY(-2px); }
-        .data-card .icon-title { font-size: 14px; color: var(--text-light); margin-bottom: 8px; display: flex; align-items: center; gap: 6px; font-weight: 500; }
-        .data-card .value { font-size: 28px; font-weight: 700; color: var(--text); }
-        .data-card .unit { font-size: 14px; font-weight: 400; color: var(--text-light); }
-        
-        /* 控制面板 */
-        .controls-card { background: var(--surface); padding: 24px; border-radius: 16px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); border: 1px solid var(--border); }
-        .btn-group { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 16px; }
-        .control-btn { font-size: 14px; font-weight: 500; padding: 10px 18px; border: none; border-radius: 8px; color: white; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; gap: 6px; }
-        .control-btn:active { transform: scale(0.98); }
-        .btn-on { background-color: var(--primary); } .btn-on:hover { background-color: #059669; }
-        .btn-off { background-color: #ef4444; } .btn-off:hover { background-color: #dc2626; }
-        .btn-action { background-color: var(--secondary); } .btn-action:hover { background-color: #2563eb; }
-        .btn-vision { background-color: var(--accent); } .btn-vision:hover { background-color: #7c3aed; }
-        
-        #control-status { font-size: 14px; color: var(--text-light); background: #f9fafb; padding: 10px; border-radius: 8px; min-height: 20px; margin-top: 16px; border: 1px dashed var(--border); }
-        
-        /* AI & Vision */
-        .ai-box { margin-top: 20px; padding: 20px; background: #eff6ff; border-radius: 12px; border-left: 4px solid var(--secondary); display: none; }
-        .ai-box h3 { margin: 0 0 12px; font-size: 16px; color: #1e3a8a; }
-        .ai-box p { margin: 6px 0; font-size: 14px; color: #1e40af; }
-        .ai-box img { max-width: 100%; border-radius: 8px; margin-top: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-        
-        .expert-box { margin-top: 16px; padding: 20px; background: #fffbeb; border-radius: 12px; border-left: 4px solid #f59e0b; display: none; font-size: 14px; line-height: 1.6; color: #92400e; }
-        
-        /* 策略栏 */
-        .policy-bar { display: flex; flex-wrap: wrap; gap: 16px; align-items: center; background: #f8fafc; padding: 16px; border-radius: 12px; border: 1px solid #e2e8f0; }
-        .policy-item { display: flex; align-items: center; gap: 8px; font-size: 14px; }
-        .policy-item input[type="number"], .policy-item input[type="password"] { padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px; font-size: 14px; outline: none; transition: border 0.2s; }
-        .policy-item input:focus { border-color: var(--secondary); }
-        
-        .meta-info { text-align: center; margin-top: 32px; font-size: 12px; color: var(--text-light); }
-        
-        /* 呼吸灯动画 */
-        @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0.3; } 100% { opacity: 1; } }
-    </style>
-</head>
-<body>
-    <header class="navbar">
-        <h1>藏红花智能培育中心</h1>
-        <div class="nav-links">
-            <a href="/history">历史数据</a>
-            <a href="/admin">后台管理</a>
+{% extends "base.html" %}
+
+{% block title %}实时监控 - 藏红花培育系统{% endblock %}
+
+{% block head_assets %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+{% endblock %}
+
+{% block body %}
+  <div class="app-page">
+    <div class="app-shell">
+      <header class="topbar">
+        <div>
+          <h1 class="topbar__title">藏红花智能培育中心</h1>
+          <p class="topbar__subtitle">实时感知、边云协同、设备控制统一收敛到清晰的监控面板。</p>
         </div>
-    </header>
+        <nav class="topbar__links">
+          <a href="/history">历史数据</a>
+          <a href="/admin">后台管理</a>
+          <a href="/login">账号登录</a>
+        </nav>
+      </header>
 
-    <div class="container">
-        <div style="display: flex; align-items: center; justify-content: space-between; background: linear-gradient(135deg, #1e293b, #0f172a); padding: 20px 24px; border-radius: 16px; margin-bottom: 24px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); border: 1px solid #334155;">
-            <div>
-                <h2 style="margin: 0 0 8px 0; font-size: 18px; font-weight: 600; color: #38bdf8; display: flex; align-items: center; gap: 8px;">
-                    藏红花数字孪生云平台
-                </h2>
-                <p style="margin: 0; font-size: 13px; color: #94a3b8;">边云协同架构演示 · 新加坡公网节点实时同步</p>
-                <div style="margin-top: 14px; font-size: 12px; display: inline-flex; align-items: center; background: rgba(56,189,248,0.1); padding: 4px 12px; border-radius: 20px; color: #38bdf8; border: 1px solid rgba(56,189,248,0.3);">
-                    <span style="display: inline-block; width: 6px; height: 6px; background-color: #38bdf8; border-radius: 50%; margin-right: 6px; box-shadow: 0 0 8px #38bdf8; animation: blink 1.5s infinite;"></span>
-                    跨域数据链路已打通
-                </div>
-            </div>
-            <div style="background: white; padding: 6px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); display: flex; flex-direction: column; align-items: center;">
-                <img src="http://104.248.150.11/qrcode" alt="云端看板二维码" style="width: 86px; height: 86px; display: block;">
-                <span style="font-size: 11px; color: #64748b; margin-top: 4px; font-weight: 500;">扫码访问公网</span>
-            </div>
+      <section class="page-section panel dashboard-hero">
+        <div>
+          <div class="dashboard-hero__eyebrow">Saffron Edge Console</div>
+          <h2 class="dashboard-hero__title">把传感器、设备控制和 AI 分析从一坨页面逻辑里解开。</h2>
+          <p class="dashboard-hero__summary">
+            当前首页只保留页面骨架，交互逻辑全部迁移到独立脚本，样式也抽到了静态资源中。后续继续扩展实时卡片、设备面板或更多模型能力时，不用再把所有东西堆回一个模板文件。
+          </p>
+          <div class="dashboard-hero__meta">
+            <span id="cloud-badge" class="pill-status">探测云端连接状态...</span>
+            <span class="pill-status">STM32 MicroPython + Raspberry Pi</span>
+          </div>
         </div>
+        <aside class="panel dashboard-hero__qr">
+          <img src="http://104.248.150.11/qrcode" alt="云端看板二维码">
+          <span>扫码查看公网看板</span>
+        </aside>
+      </section>
 
-        <div class="section-title">实时环境感知</div>
-        <div class="sensors-grid">
-            <div class="data-card">
-                <div class="icon-title">温度</div>
-                <div class="value"><span id="temp">--</span> <span class="unit">°C</span></div>
-            </div>
-            <div class="data-card">
-                <div class="icon-title">空气湿度</div>
-                <div class="value"><span id="humi">--</span> <span class="unit">%</span></div>
-            </div>
-            <div class="data-card">
-                <div class="icon-title">光照强度</div>
-                <div class="value"><span id="lux">--</span> <span class="unit">lux</span></div>
-            </div>
-            <div class="data-card" style="border-left: 4px solid var(--secondary);">
-                <div class="icon-title">土壤湿度</div>
-                <div class="value"><span id="soil">--</span> <span class="unit">%</span></div>
-            </div>
-            <div class="data-card" style="border-left: 4px solid var(--accent);">
-                <div class="icon-title">现场手势交互</div>
-                <div class="value" style="font-size: 20px; line-height: 1.4;"><span id="gesture">--</span></div>
-            </div>
+      <section class="page-section">
+        <h2 class="section-heading">实时环境感知</h2>
+        <div class="sensor-grid">
+          <article class="panel sensor-card">
+            <div class="sensor-card__label">温度</div>
+            <div class="sensor-card__value"><span id="temp">--</span> <span class="sensor-card__unit">°C</span></div>
+          </article>
+          <article class="panel sensor-card">
+            <div class="sensor-card__label">空气湿度</div>
+            <div class="sensor-card__value"><span id="humi">--</span> <span class="sensor-card__unit">%</span></div>
+          </article>
+          <article class="panel sensor-card">
+            <div class="sensor-card__label">光照强度</div>
+            <div class="sensor-card__value"><span id="lux">--</span> <span class="sensor-card__unit">lux</span></div>
+          </article>
+          <article class="panel sensor-card sensor-card--emphasis">
+            <div class="sensor-card__label">土壤湿度</div>
+            <div class="sensor-card__value"><span id="soil">--</span> <span class="sensor-card__unit">%</span></div>
+          </article>
+          <article class="panel sensor-card">
+            <div class="sensor-card__label">现场手势交互</div>
+            <div class="sensor-card__value" style="font-size: 22px;"><span id="gesture">--</span></div>
+            <div class="sensor-card__note">来自边缘节点的最新交互态势</div>
+          </article>
         </div>
+      </section>
 
-        <div class="section-title">边缘设备与 AI 控制</div>
-        <div class="controls-card">
-            <div class="btn-group">
-                <button id="pump-on-btn" class="control-btn btn-on">开启水泵</button>
-                <button id="pump-off-btn" class="control-btn btn-off">关闭水泵</button>
-                <button id="led-strip-on-btn" class="control-btn btn-on">点亮补光灯</button>
-                <button id="led-strip-off-btn" class="control-btn btn-off">熄灭补光灯</button>
-                <button id="led-on-btn" class="control-btn btn-on">开启指示灯</button>
-                <button id="led-off-btn" class="control-btn btn-off">关闭指示灯</button>
-            </div>
-            <div style="border-top: 1px solid var(--border); margin: 16px 0;"></div>
-            <div class="btn-group">
-                <button id="capture-photo-btn" class="control-btn btn-action">现场抓拍</button>
-                <button id="analyze-vision-btn" class="control-btn btn-vision">AI 视觉表型分析</button>
-                <button id="ask-ai-btn" class="control-btn" style="background-color: #f59e0b; color: white;">咨询 Qwen 专家系统</button>
-            </div>
-            
-            <div id="control-status">等待指令...</div>
+      <section class="page-section dashboard-grid">
+        <article class="panel control-panel">
+          <h2 class="section-heading">边缘设备与 AI 控制</h2>
+          <div class="button-row">
+            <button id="pump-on-btn" class="button button--primary">开启水泵</button>
+            <button id="pump-off-btn" class="button button--danger">关闭水泵</button>
+            <button id="led-strip-on-btn" class="button button--secondary">点亮补光灯</button>
+            <button id="led-strip-off-btn" class="button button--ghost">熄灭补光灯</button>
+            <button id="led-on-btn" class="button button--secondary">开启指示灯</button>
+            <button id="led-off-btn" class="button button--ghost">关闭指示灯</button>
+          </div>
+          <div class="button-row" style="margin-top: 12px;">
+            <button id="capture-photo-btn" class="button button--secondary">现场抓拍</button>
+            <button id="analyze-vision-btn" class="button button--primary">AI 视觉表型分析</button>
+            <button id="ask-ai-btn" class="button button--primary">咨询 Qwen 专家系统</button>
+          </div>
+          <div id="control-status" class="status-text" style="margin-top: 16px;">等待指令...</div>
 
-            <div id="vision-results" class="ai-box">
-                <h3>OpenCV 表型分析结果</h3>
-                <p><strong>主导颜色:</strong> <span id="vision-color">---</span></p>
-                <p><strong>判定生长阶段:</strong> <span id="vision-stage" style="font-weight: 600;">---</span></p>
-                <p><strong>置信分布:</strong> <span id="vision-scores" style="font-family: monospace; font-size: 12px;">---</span></p>
-                <img id="vision-image" src="" alt="分析结果生成中...">
-            </div>
+          <div id="vision-results" class="result-box">
+            <h3>OpenCV 表型分析结果</h3>
+            <p><strong>主导颜色:</strong> <span id="vision-color">---</span></p>
+            <p><strong>判定生长阶段:</strong> <span id="vision-stage">---</span></p>
+            <p><strong>置信分布:</strong> <span id="vision-scores">---</span></p>
+            <img id="vision-image" src="" alt="分析结果生成中...">
+          </div>
 
-            <div id="ai-response" class="expert-box">
-                <strong>边缘端大模型建议：</strong><br>
-                <span id="ai-text">推理计算中...</span>
+          <div id="ai-response" class="result-box">
+            <h3>边缘端大模型建议</h3>
+            <div id="ai-text">推理计算中...</div>
+          </div>
+        </article>
+
+        <article class="panel policy-panel">
+          <h2 class="section-heading">自动灌溉边缘策略</h2>
+          <div class="policy-form">
+            <label class="policy-toggle" for="policy-enabled">
+              <input type="checkbox" id="policy-enabled">
+              <span>启用策略</span>
+            </label>
+            <div class="policy-inline">
+              <div class="field">
+                <label for="policy-threshold">触发阈值</label>
+                <input type="number" id="policy-threshold" min="0" max="100" step="0.1" placeholder="%">
+              </div>
+              <div class="field">
+                <label for="policy-seconds">浇水时长</label>
+                <input type="number" id="policy-seconds" min="1" max="3600" step="1" placeholder="秒">
+              </div>
             </div>
+            <div class="policy-inline">
+              <div class="field">
+                <label for="policy-cooldown">冷却间隔</label>
+                <input type="number" id="policy-cooldown" min="0" max="86400" step="1" placeholder="秒">
+              </div>
+              <div class="field">
+                <label for="admin-token">Admin Token</label>
+                <input type="password" id="admin-token" placeholder="可选">
+              </div>
+            </div>
+            <button id="policy-save" class="button button--primary">保存策略</button>
+            <div id="policy-msg" class="status-text"></div>
+            <div class="pill-status">当前状态: <span id="policy-status">获取中...</span></div>
+          </div>
+        </article>
+      </section>
+
+      <section class="page-section panel page-meta">
+        <div class="page-meta__text">
+          数据最后同步于: <span id="update-time">从未</span><br>
+          前端现在采用模板继承 + 公共样式 + 页面脚本分层。
         </div>
-
-        <div class="section-title">自动灌溉边缘策略</div>
-        <div class="controls-card">
-            <div class="policy-bar">
-                <div class="policy-item">
-                    <input type="checkbox" id="policy-enabled" style="width: 18px; height: 18px; accent-color: var(--primary);">
-                    <label for="policy-enabled" style="font-weight: 500;">启用策略</label>
-                </div>
-                <div class="policy-item">
-                    触发阈值: <input type="number" id="policy-threshold" min="0" max="100" step="0.1" style="width:70px;" placeholder="%">
-                </div>
-                <div class="policy-item">
-                    浇水时长: <input type="number" id="policy-seconds" min="1" max="3600" step="1" style="width:70px;" placeholder="秒">
-                </div>
-                <div class="policy-item">
-                    冷却间隔: <input type="number" id="policy-cooldown" min="0" max="86400" step="1" style="width:80px;" placeholder="秒">
-                </div>
-                <div class="policy-item">
-                    <input type="password" id="admin-token" placeholder="Admin Token" style="width:120px;">
-                </div>
-                <button id="policy-save" class="control-btn btn-action" style="padding: 8px 16px;">保存策略</button>
-            </div>
-            <div style="display: flex; justify-content: space-between; margin-top: 12px; font-size: 13px; color: var(--text-light);">
-                <div id="policy-msg"></div>
-                <div>当前状态: <span id="policy-status" style="font-weight: 500; color: var(--primary);">获取中...</span></div>
-            </div>
-        </div>
-
-        <div class="meta-info">
-            数据最后同步于: <span id="update-time">从未</span> | STM32 MicroPython & Raspberry Pi
-            <br>
-            <div id="cloud-badge" style="margin-top: 12px; display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: 20px; font-size: 13px; font-weight: 600; border: 1px solid #d1d5db; background: #f3f4f6; color: #4b5563; transition: all 0.3s;">
-                探测云端连接状态...
-            </div>
-        </div>
+      </section>
     </div>
+  </div>
+{% endblock %}
 
-    <script>
-        const sensorApiUrl = '/api/v1/sensors/latest', controlApiUrl = '/api/v1/control';
-        const captureApiUrl = '/api/v1/camera/capture';
-        const visionApiUrl = '/api/v1/vision/analyze';
-
-        const tempElement = document.getElementById('temp'), humiElement = document.getElementById('humi'),
-              luxElement = document.getElementById('lux'), soilElement = document.getElementById('soil'),
-              gestureElement = document.getElementById('gesture'),
-              timeElement = document.getElementById('update-time'), statusElement = document.getElementById('control-status');
-
-        async function fetchData() {
-            try {
-                const response = await fetch(sensorApiUrl);
-                if (!response.ok) throw new Error(`HTTP 错误! 状态: ${response.status}`);
-                const data = await response.json();
-                tempElement.textContent = data.temperature ?? '--';
-                humiElement.textContent = data.humidity ?? '--';
-                luxElement.textContent = data.lux ? data.lux.toFixed(1) : '--';
-                soilElement.textContent = data.soil ?? '--';
-                gestureElement.textContent = data.gesture ?? '暂无识别';
-                timeElement.textContent = data.timestamp ?? 'N/A';
-                
-                // --- 更新云端同步状态 UI ---
-                const cloudBadge = document.getElementById('cloud-badge');
-                if (data.cloud_ok) {
-                    cloudBadge.style.backgroundColor = '#d1fae5';
-                    cloudBadge.style.borderColor = '#10b981';
-                    cloudBadge.style.color = '#065f46';
-                    cloudBadge.innerHTML = '边云协同正常 (数据实时上云中)';
-                } else {
-                    cloudBadge.style.backgroundColor = '#fee2e2';
-                    cloudBadge.style.borderColor = '#ef4444';
-                    cloudBadge.style.color = '#991b1b';
-                    cloudBadge.innerHTML = '边缘自治模式 (云端断线，本地闭环运行)';
-                }
-                
-            } catch (error) {
-                console.error("获取数据失败:", error);
-                tempElement.textContent = '--'; humiElement.textContent = '--';
-                luxElement.textContent = '--'; soilElement.textContent = '--';
-                gestureElement.textContent = '--'; timeElement.textContent = '连接失败';
-            }
-        }
-
-        async function sendControlCommand(command) {
-            statusElement.innerHTML = `⏳ 正在下发边缘指令: ${command}...`;
-            try {
-                const response = await fetch(controlApiUrl, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ command: command })
-                });
-                const result = await response.json();
-                if (!response.ok) throw new Error(result.message || '未知错误');
-                statusElement.innerHTML = `成功: ${result.message}`;
-            } catch (error) {
-                console.error("发送命令失败:", error);
-                statusElement.innerHTML = `错误: ${error.message}`;
-            }
-        }
-        
-        async function capturePhoto() {
-            statusElement.innerHTML = `正在唤醒摄像头...`;
-            try {
-                const response = await fetch(captureApiUrl, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' }
-                });
-                const result = await response.json();
-                if (!response.ok) throw new Error(result.message || '未知错误');
-                statusElement.innerHTML = `${result.message} <br> <a href="/${result.path}" target="_blank" style="color:var(--secondary);">查看现场实拍图</a>`;
-            } catch (error) {
-                console.error("拍照失败:", error);
-                statusElement.innerHTML = `硬件错误: ${error.message}`;
-            }
-        }
-
-        async function analyzeVision() {
-            statusElement.innerHTML = '启动本地图像推理...';
-            document.getElementById('vision-results').style.display = 'none';
-            try {
-                const response = await fetch(visionApiUrl, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' }
-                });
-                const result = await response.json();
-                if (!response.ok || result.status !== 'success') {
-                    throw new Error(result.message || '推理失败');
-                }
-                document.getElementById('vision-color').textContent = result.detected_color;
-                document.getElementById('vision-stage').textContent = result.growth_stage;
-                document.getElementById('vision-scores').textContent = JSON.stringify(result.scores);
-                document.getElementById('vision-image').src = result.analysis_image_url + '?t=' + new Date().getTime();
-                document.getElementById('vision-results').style.display = 'block';
-                statusElement.innerHTML = '视觉分析完毕';
-            } catch (error) {
-                console.error("分析失败:", error);
-                statusElement.innerHTML = `CV引擎错误: ${error.message}`;
-            }
-        }
-
-        const policyGetUrl = '/api/v1/policy/irrigation', policyPostUrl = '/api/v1/policy/irrigation', policyStatusUrl = '/api/v1/policy/irrigation/status';
-        async function loadPolicy(){try{const r=await fetch(policyGetUrl);const p=await r.json();const en=!!(p&&(p.enabled===1||p.enabled===true));const th=p&&p.soil_threshold_min!=null?p.soil_threshold_min:'';const sec=p&&p.watering_seconds!=null?p.watering_seconds:'';const cd=p&&p.cooldown_seconds!=null?p.cooldown_seconds:'';document.getElementById('policy-enabled').checked=en;document.getElementById('policy-threshold').value=th;document.getElementById('policy-seconds').value=sec;document.getElementById('policy-cooldown').value=cd;}catch(e){document.getElementById('policy-msg').textContent='无法加载策略';}}
-        async function savePolicy(){const enabled=document.getElementById('policy-enabled').checked;const soil=parseFloat(document.getElementById('policy-threshold').value);const secs=parseInt(document.getElementById('policy-seconds').value,10);const cd=parseInt(document.getElementById('policy-cooldown').value,10);const token=(document.getElementById('admin-token').value||'').trim();const msg=document.getElementById('policy-msg');msg.textContent='正在持久化...';try{const headers={'Content-Type':'application/json'};if(token)headers['X-Admin-Token']=token;const r=await fetch(policyPostUrl,{method:'POST',headers,body:JSON.stringify({enabled:enabled,soil_threshold_min:soil,watering_seconds:secs,cooldown_seconds:cd})});const res=await r.json();if(!r.ok)throw new Error(res.error||'保存失败');msg.style.color='var(--primary)';msg.textContent='已保存至数据库';loadPolicy();}catch(e){msg.style.color='red';msg.textContent='鉴权/写入失败: '+e.message;}}
-        async function refreshPolicyStatus(){try{const r=await fetch(policyStatusUrl);if(!r.ok)throw new Error('HTTP '+r.status);const s=await r.json();document.getElementById('policy-status').textContent=s.watering?('正在灌溉，开始于 '+(s.last_start_ts||'')):('待机监控中，上次执行 '+(s.last_end_ts||'未知'));}catch(e){document.getElementById('policy-status').textContent='边缘服务连接异常';}}
-        
-        document.getElementById('policy-save')?.addEventListener('click',savePolicy);
-        loadPolicy();
-        refreshPolicyStatus();
-        setInterval(refreshPolicyStatus,3000);
-
-        document.getElementById('led-on-btn').addEventListener('click', () => sendControlCommand('led_on'));
-        document.getElementById('led-off-btn').addEventListener('click', () => sendControlCommand('led_off'));
-        document.getElementById('pump-on-btn').addEventListener('click', () => sendControlCommand(JSON.stringify({actuator:'pump', action:'on'})));
-        document.getElementById('pump-off-btn').addEventListener('click', () => sendControlCommand(JSON.stringify({actuator:'pump', action:'off'})));
-        document.getElementById('led-strip-on-btn').addEventListener('click', () => sendControlCommand(JSON.stringify({actuator:'led_strip', action:'on'})));
-        document.getElementById('led-strip-off-btn').addEventListener('click', () => sendControlCommand(JSON.stringify({actuator:'led_strip', action:'off'})));
-        document.getElementById('capture-photo-btn').addEventListener('click', capturePhoto);
-        document.getElementById('analyze-vision-btn').addEventListener('click', analyzeVision);
-
-        fetchData();
-        setInterval(fetchData, 1000);
-        
-        const aiApiUrl = '/api/v1/assistant';
-        document.getElementById('ask-ai-btn').addEventListener('click', async () => {
-            const resDiv = document.getElementById('ai-response');
-            const textSpan = document.getElementById('ai-text');
-            const btn = document.getElementById('ask-ai-btn');
-            
-            resDiv.style.display = 'block';
-            textSpan.textContent = '正在唤醒 Qwen 本地模型进行推理... (边缘算力有限，请耐心等待 10~30 秒)';
-            btn.disabled = true;
-            btn.style.opacity = '0.7';
-
-            try {
-                const response = await fetch(aiApiUrl, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ message: "请简短评估当前环境是否适合藏红花生长，并给出动作建议（比如是否需要浇水或开灯）。" })
-                });
-                const result = await response.json();
-                if (!response.ok || result.status !== 'success') {
-                    throw new Error(result.message || '大模型推理失败');
-                }
-                textSpan.innerHTML = result.answer.replace(/\n/g, '<br>'); 
-            } catch (error) {
-                console.error("AI 助手失败:", error);
-                textSpan.textContent = `请求失败: ${error.message}`;
-            } finally {
-                btn.disabled = false;
-                btn.style.opacity = '1';
-            }
-        });
-    </script>
-</body>
-</html>
+{% block scripts %}
+  <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+{% endblock %}

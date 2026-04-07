@@ -15,6 +15,19 @@ window.EdgeApp = (() => {
     return headers;
   }
 
+  async function fetchJson(url, options = {}) {
+    const response = await fetch(url, {
+      ...options,
+      headers: {
+        ...(options.headers || {}),
+        ...(options.body ? { 'Content-Type': 'application/json' } : {}),
+      },
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || result.message || `HTTP ${response.status}`);
+    return result;
+  }
+
   function readNumber(id, parser) {
     const raw = document.getElementById(id)?.value?.trim();
     if (raw === '') return null;
@@ -75,6 +88,7 @@ window.EdgeApp = (() => {
   }
 
   return {
+    fetchJson,
     getStoredToken,
     getAuthHeaders,
     loadPolicyIntoForm,
