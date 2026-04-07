@@ -43,13 +43,20 @@ class DeviceService:
             data = json.loads(decoded_line)
             ts = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
             payload = {
-                "temperature": data.get("temp"),
-                "humidity": data.get("humi"),
-                "lux": data.get("lux"),
-                "soil": data.get("soil"),
                 "gesture": data.get("gesture"),
                 "timestamp": ts,
             }
+            # Preserve the last valid sensor readings when a packet omits a field.
+            sensor_fields = (
+                ("temperature", "temp"),
+                ("humidity", "humi"),
+                ("lux", "lux"),
+                ("soil", "soil"),
+            )
+            for payload_key, source_key in sensor_fields:
+                value = data.get(source_key)
+                if value is not None:
+                    payload[payload_key] = value
             self.runtime_state.update_latest_data(payload)
             self.db.insert_sensor_data(
                 self.device_id,

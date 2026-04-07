@@ -32,6 +32,7 @@
     adminToken: document.getElementById("admin-token"),
     policyMsg: document.getElementById("policy-msg"),
     policyStatus: document.getElementById("policy-status"),
+    policyLiveBanner: document.getElementById("policy-live-banner"),
     actuatorStatus: document.getElementById("actuator-status"),
   };
 
@@ -44,6 +45,11 @@
     els.cloudBadge.textContent = cloudOk
       ? "边云协同正常，数据正在实时上云"
       : "边缘自治模式，云端链路暂时不可用";
+  }
+
+  function setPolicyLiveBanner({ active, text }) {
+    els.policyLiveBanner.className = `pill-status ${active ? "pill-status--ok" : ""}`.trim();
+    els.policyLiveBanner.textContent = text;
   }
 
   async function fetchData() {
@@ -74,6 +80,7 @@
         body: JSON.stringify({ command }),
       });
       setControlStatus(`成功: ${result.message}`);
+      refreshPolicyStatus();
     } catch (error) {
       console.error("发送命令失败:", error);
       setControlStatus(`错误: ${error.message}`);
@@ -155,6 +162,7 @@
       }, els.adminToken.value);
       els.policyMsg.textContent = "已保存至数据库";
       els.policyMsg.style.color = "var(--shell-success)";
+      refreshPolicyStatus();
     } catch (error) {
       els.policyMsg.textContent = `鉴权/写入失败: ${error.message}`;
       els.policyMsg.style.color = "var(--shell-danger)";
@@ -164,11 +172,18 @@
   async function refreshPolicyStatus() {
     try {
       const state = await EdgeApp.fetchJson(api.policyStatus);
-      els.policyStatus.textContent = state.watering
-        ? `正在灌溉，开始于 ${state.last_start_ts || ""}`
-        : `待机监控中，上次执行 ${state.last_end_ts || "未知"}`;
-      if (!state.watering && state.last_reason) {
-        els.policyStatus.textContent += `，触发原因: ${state.last_reason}`;
+      if (state.watering) {
+        els.policyStatus.textContent = `自动浇水中${state.last_start_ts ? `，开始于 ${state.last_start_ts}` : ""}`;
+        if (state.last_reason) {
+          els.policyStatus.textContent += `，触发原因: ${state.last_reason}`;
+        }
+        setPolicyLiveBanner({ active: true, text: "自动浇水中" });
+      } else {
+        els.policyStatus.textContent = `待机监控中，上次执行 ${state.last_end_ts || "未知"}`;
+        if (state.last_reason) {
+          els.policyStatus.textContent += `，上次触发原因: ${state.last_reason}`;
+        }
+        setPolicyLiveBanner({ active: false, text: "自动浇水待机中" });
       }
       const feedback = state.actuator_feedback || {};
       els.actuatorStatus.textContent = feedback.timestamp
@@ -176,6 +191,7 @@
         : "等待执行器状态更新";
     } catch (error) {
       els.policyStatus.textContent = "边缘服务连接异常";
+      setPolicyLiveBanner({ active: false, text: "自动浇水状态获取失败" });
       els.actuatorStatus.textContent = "执行器状态获取失败";
     }
   }
@@ -195,5 +211,5 @@
   loadPolicy();
   refreshPolicyStatus();
   setInterval(fetchData, 1000);
-  setInterval(refreshPolicyStatus, 3000);
+  setInterval(refreshPolicyStatus, 1000);
 })();
