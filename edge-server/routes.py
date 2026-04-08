@@ -56,22 +56,6 @@ def register_routes(app, *, auth, runtime_state, camera_service, vision_service,
     def login_page():
         return render_template("login.html")
 
-    @app.route("/api/v1/camera/capture", methods=["POST"])
-    def capture_photo():
-        if not camera_service.available:
-            return jsonify({"status": "error", "message": "摄像头模块不可用或未初始化。"}), 503
-        try:
-            # 拍照接口只负责落盘并返回静态资源路径，展示逻辑由前端处理。
-            filename, filepath = camera_service.capture("saffron")
-            print(f"照片已保存至: {filepath}")
-            return jsonify({
-                "status": "success",
-                "message": "照片拍摄成功！",
-                "path": f"static/captures/{filename}",
-            })
-        except Exception as exc:
-            return jsonify({"status": "error", "message": f"拍照失败: {exc}"}), 500
-
     @app.route("/api/v1/vision/analyze", methods=["POST"])
     def analyze_vision():
         if not camera_service.available:

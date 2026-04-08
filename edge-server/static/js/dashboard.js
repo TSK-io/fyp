@@ -4,7 +4,6 @@
     sensor: "/api/v1/sensors/latest",
     intelligence: "/api/v1/intelligence/diagnosis",
     control: "/api/v1/control",
-    capture: "/api/v1/camera/capture",
     vision: "/api/v1/vision/analyze",
     assistant: "/api/v1/assistant",
     policyStatus: "/api/v1/policy/irrigation/status",
@@ -205,17 +204,6 @@
     }
   }
 
-  async function capturePhoto() {
-    setControlStatus("正在唤醒摄像头...");
-    try {
-      const result = await EdgeApp.fetchJson(api.capture, { method: "POST" });
-      setControlStatus(`抓拍完成: ${result.path}`);
-    } catch (error) {
-      console.error("拍照失败:", error);
-      setControlStatus(`硬件错误: ${error.message}`);
-    }
-  }
-
   async function analyzeVision() {
     setControlStatus("启动本地图像推理...");
     els.visionResults.classList.remove("result-box--visible");
@@ -333,7 +321,6 @@
   document.getElementById("pump-off-btn").addEventListener("click", () => sendControlCommand(JSON.stringify({ actuator: "pump", action: "off" })));
   document.getElementById("led-strip-on-btn").addEventListener("click", () => sendControlCommand(JSON.stringify({ actuator: "led_strip", action: "on" })));
   document.getElementById("led-strip-off-btn").addEventListener("click", () => sendControlCommand(JSON.stringify({ actuator: "led_strip", action: "off" })));
-  document.getElementById("capture-photo-btn").addEventListener("click", capturePhoto);
   document.getElementById("analyze-vision-btn").addEventListener("click", analyzeVision);
   document.getElementById("ask-ai-btn").addEventListener("click", askAssistant);
 
