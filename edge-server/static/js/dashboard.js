@@ -321,6 +321,10 @@
   document.getElementById("pump-off-btn").addEventListener("click", () => sendControlCommand(JSON.stringify({ actuator: "pump", action: "off" })));
   document.getElementById("led-strip-on-btn").addEventListener("click", () => sendControlCommand(JSON.stringify({ actuator: "led_strip", action: "on" })));
   document.getElementById("led-strip-off-btn").addEventListener("click", () => sendControlCommand(JSON.stringify({ actuator: "led_strip", action: "off" })));
+  document.getElementById("led-strip-manual-btn").addEventListener("click", () => sendControlCommand(JSON.stringify({ actuator: "led_strip", action: "manual" })));
+  document.getElementById("led-strip-auto-btn").addEventListener("click", () => sendControlCommand(JSON.stringify({ actuator: "led_strip", action: "auto" })));
+  document.getElementById("led-manual-btn").addEventListener("click", () => sendControlCommand(JSON.stringify({ actuator: "status_led", action: "manual" })));
+  document.getElementById("led-auto-btn").addEventListener("click", () => sendControlCommand(JSON.stringify({ actuator: "status_led", action: "auto" })));
   document.getElementById("analyze-vision-btn").addEventListener("click", analyzeVision);
   document.getElementById("ask-ai-btn").addEventListener("click", askAssistant);
 
