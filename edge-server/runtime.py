@@ -5,6 +5,7 @@ from datetime import datetime
 
 @dataclass
 class RuntimeState:
+    # latest_data 保存“当前页面应该显示什么”，由串口线程持续刷新。
     latest_data: dict = field(default_factory=lambda: {
         "temperature": None,
         "humidity": None,
@@ -13,6 +14,7 @@ class RuntimeState:
         "gesture": None,
         "timestamp": None,
     })
+    # auto_irrigation_state 记录自动灌溉决策和最近一次执行结果，供前端实时轮询。
     auto_irrigation_state: dict = field(default_factory=lambda: {
         "watering": False,
         "last_start_ts": None,
@@ -22,6 +24,7 @@ class RuntimeState:
         "recommended_duration": None,
         "decision_hint": "等待智能决策",
     })
+    # actuator_feedback 专门给 UI 展示最近一次控制动作的反馈文案。
     actuator_feedback: dict = field(default_factory=lambda: {
         "actuator": None,
         "action": None,
@@ -29,6 +32,7 @@ class RuntimeState:
         "message": "等待执行器状态更新",
         "timestamp": None,
     })
+    # data_lock 保护传感器快照，serial_lock 保护串口对象本身。
     data_lock: threading.Lock = field(default_factory=threading.Lock)
     serial_lock: threading.Lock = field(default_factory=threading.Lock)
 
@@ -45,6 +49,7 @@ class RuntimeState:
 
     def update_irrigation_decision(self, *, effective_threshold=None, recommended_duration=None,
                                    last_reason=None, decision_hint=None):
+        # 自动灌溉线程每轮都会覆盖“当前判断”，前端因此能看到实时策略解释。
         self.auto_irrigation_state.update({
             "effective_threshold": effective_threshold,
             "recommended_duration": recommended_duration,

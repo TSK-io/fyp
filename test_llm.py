@@ -1,6 +1,8 @@
 from llama_cpp import Llama
 import sys
 
+# 这个脚本用于独立验证 GGUF 模型文件能否被 llama.cpp 正常加载，
+# 方便把“模型损坏/路径错误”和“主服务集成问题”区分开来排查。
 model_path = "/home/rpi/fyp/edge-server/models/qwen2.5-0.5b-instruct-q4_k_m.gguf"
 print(f"尝试加载模型: {model_path}")
 

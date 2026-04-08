@@ -8,6 +8,7 @@
 
 {% block body %}
   <div class="app-page">
+    {# 全局浇水提示浮层，由 dashboard.js 根据自动灌溉状态控制显示。 #}
     <div id="watering-toast" class="watering-toast" aria-live="polite" aria-atomic="true">
       <span class="watering-toast__dot"></span>
       <span class="watering-toast__text">自动浇水中</span>
@@ -37,6 +38,7 @@
 
       <section class="page-section">
         <h2 class="section-heading">实时环境感知</h2>
+        {# 这一组卡片只展示 RuntimeState 中最新的一帧数据。 #}
         <div class="sensor-grid">
           <article class="panel sensor-card">
             <div class="sensor-card__label">温度</div>
@@ -63,6 +65,7 @@
 
       <section class="page-section">
         <article class="panel intelligence-panel">
+          {# 智能诊断区展示规则引擎聚合后的健康评分、风险、趋势与灌溉建议。 #}
           <div class="intelligence-panel__header">
             <div>
               <h2 class="section-heading">智能诊断中枢</h2>
@@ -115,6 +118,7 @@
       <section class="page-section dashboard-grid">
         <article class="panel control-panel">
           <h2 class="section-heading">边缘设备</h2>
+          {# 这里的按钮都会调用 /api/v1/control，由后端再下发到 STM32。 #}
           <div class="button-row">
             <button id="pump-on-btn" class="button button--primary">开启水泵</button>
             <button id="pump-off-btn" class="button button--danger">关闭水泵</button>
@@ -147,6 +151,7 @@
 
         <article class="panel policy-panel">
           <h2 class="section-heading">自动灌溉边缘策略</h2>
+          {# 配置写入数据库后，由 DeviceService 的后台线程持续读取并执行。 #}
           <div class="policy-form">
             <label class="policy-toggle" for="policy-enabled">
               <input type="checkbox" id="policy-enabled">

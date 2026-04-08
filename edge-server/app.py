@@ -28,11 +28,13 @@ from services.vision_service import VisionService
 
 
 def create_app():
+    # 先准备运行目录和数据库中的默认记录，避免后续服务初始化时缺少依赖资源。
     ensure_runtime_dirs()
     db.create_tables()
     db_device_id = db.ensure_default_device()
     db.ensure_default_irrigation_policy(db_device_id)
 
+    # 统一在这里装配所有长生命周期服务，便于测试和后续替换实现。
     runtime_state = RuntimeState()
     auth = AuthManager(db, SECRET_KEY, TOKEN_MAX_AGE, ADMIN_TOKEN)
     cloud_sync_service = CloudSyncService(CLOUD_MQTT_IP, MQTT_TOPIC)
@@ -52,6 +54,7 @@ def create_app():
 
     app = Flask(__name__)
     CORS(app)
+    # 将依赖显式注入路由层，而不是在路由文件里直接创建对象。
     register_routes(
         app,
         auth=auth,
@@ -66,6 +69,7 @@ def create_app():
         db_device_id=db_device_id,
     )
 
+    # 通过 extensions 暴露服务对象，方便主进程启动后台任务，也方便测试访问。
     app.extensions["saffron_services"] = {
         "auth": auth,
         "runtime_state": runtime_state,
@@ -85,6 +89,7 @@ app = create_app()
 
 if __name__ == "__main__":
     services = app.extensions["saffron_services"]
+    # Web 服务启动前先把边缘侧依赖服务拉起。
     services["cloud_sync_service"].connect()
     try:
         services["camera_service"].start()

@@ -19,12 +19,14 @@ class DeviceService:
         self.serial_conn = None
 
     def start_background_workers(self):
+        # 一个线程负责“收数”，一个线程负责“按策略执行浇水”。
         threading.Thread(target=self.serial_reader, daemon=True).start()
         threading.Thread(target=self.irrigation_worker, daemon=True).start()
 
     def serial_reader(self):
         while True:
             try:
+                # 串口对象会被读线程和写命令逻辑共享，因此连接动作也放到锁里。
                 with self.runtime_state.serial_lock:
                     self.serial_conn = serial.Serial(self.serial_port, self.baud_rate, timeout=2)
                 print(f"后台线程: 成功连接到串口 {self.serial_port}")
@@ -41,6 +43,7 @@ class DeviceService:
         try:
             decoded_line = line.decode("utf-8").strip()
             if "temp" not in decoded_line:
+                # STM32 可能输出调试信息；这里只消费传感器 JSON 包。
                 return
             data = json.loads(decoded_line)
             ts = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
@@ -48,7 +51,7 @@ class DeviceService:
                 "gesture": data.get("gesture"),
                 "timestamp": ts,
             }
-            # Preserve the last valid sensor readings when a packet omits a field.
+            # 某些包可能只更新部分字段，这里保留上一次有效值，避免前端频繁闪回 "--"。
             sensor_fields = (
                 ("temperature", "temp"),
                 ("humidity", "humi"),
@@ -60,6 +63,7 @@ class DeviceService:
                 if value is not None:
                     payload[payload_key] = value
             self.runtime_state.update_latest_data(payload)
+            # 数据同时写入内存快照、SQLite 历史库和云端 MQTT，分别服务实时界面、历史查询和远端同步。
             self.db.insert_sensor_data(
                 self.device_id,
                 data.get("temp"),
@@ -82,10 +86,12 @@ class DeviceService:
         actuator = None
         action = None
         try:
+            # 新版协议优先使用 JSON 指令，便于兼容更多执行器。
             parsed = json.loads(command)
             actuator = parsed.get("actuator")
             action = parsed.get("action")
         except Exception:
+            # 兼容旧前端仍可能发来的简写命令。
             legacy_map = {
                 "led_on": ("status_led", "on"),
                 "led_off": ("status_led", "off"),
@@ -157,6 +163,7 @@ class DeviceService:
                 latest_data = self.runtime_state.snapshot_latest_data()
                 history_rows = self.db.query_sensor_history(device_id=self.device_id, limit=24)
                 irrigation_state = self.runtime_state.snapshot_irrigation_state()
+                # 灌溉决策不仅看当前土壤值，也会结合历史趋势和冷却状态。
                 decision = self.agronomy_service.plan_irrigation(
                     current_data=latest_data,
                     history_rows=history_rows,
@@ -192,6 +199,7 @@ class DeviceService:
         if not success_on:
             return
 
+        # 这里直接更新共享状态，让前端能立刻感知“浇水中”，不用等下一轮轮询计算。
         irrigation_state["watering"] = True
         irrigation_state["last_start_ts"] = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
         irrigation_state["last_reason"] = reason

@@ -1,4 +1,5 @@
 (() => {
+  // 统一维护首页依赖的 API 路径，避免散落在各个事件处理函数里。
   const api = {
     sensor: "/api/v1/sensors/latest",
     intelligence: "/api/v1/intelligence/diagnosis",
@@ -86,6 +87,7 @@
   }
 
   function renderDiagnosis(diagnosis) {
+    // 诊断结果由后端规则引擎生成，这里只负责映射为卡片、趋势和推荐动作。
     const riskClassMap = {
       low: "pill-status pill-status--ok",
       medium: "pill-status",
@@ -155,6 +157,7 @@
 
   async function fetchData() {
     try {
+      // 传感器刷新频率最高，因此单独拆成轻量请求，避免和重型诊断接口互相拖慢。
       const data = await EdgeApp.fetchJson(api.sensor);
       els.temp.textContent = data.temperature ?? "--";
       els.humi.textContent = data.humidity ?? "--";
@@ -189,6 +192,7 @@
   async function sendControlCommand(command) {
     setControlStatus(`正在下发边缘指令: ${command}`);
     try {
+      // control 接口接受原始 command 字符串，兼容 JSON 指令与旧版简写协议。
       const result = await EdgeApp.fetchJson(api.control, {
         method: "POST",
         body: JSON.stringify({ command }),
@@ -232,6 +236,7 @@
 
   async function askAssistant() {
     els.aiResponse.classList.add("result-box--visible");
+    // 请求返回前先显示“规则模式”，如果 LLM 可用再由响应结果把徽章切到本地模型。
     setAiModeBadge("heuristic");
     els.aiText.textContent = "正在唤醒 Qwen 本地模型进行推理...";
     els.askAiBtn.disabled = true;
@@ -288,6 +293,7 @@
   async function refreshPolicyStatus() {
     try {
       const state = await EdgeApp.fetchJson(api.policyStatus);
+      // 只在状态从“非浇水”切换到“浇水中”时弹一次提示，避免轮询时反复闪烁。
       if (state.watering && lastWateringState !== true) {
         showWateringToast();
       }
@@ -331,6 +337,7 @@
   document.getElementById("analyze-vision-btn").addEventListener("click", analyzeVision);
   document.getElementById("ask-ai-btn").addEventListener("click", askAssistant);
 
+  // 首页采用“快速数据 + 中速诊断”的分层轮询策略，兼顾实时性和树莓派负载。
   fetchData();
   refreshDiagnosis();
   loadPolicy();

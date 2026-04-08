@@ -9,6 +9,8 @@ import db
 
 def register_routes(app, *, auth, runtime_state, camera_service, vision_service, llm_service, device_service,
                     agronomy_service, require_admin_for_control, admin_token, db_device_id):
+    # 统一处理日期筛选参数:
+    # 前端若只传 YYYY-MM-DD，这里自动补齐为整天范围，避免查询结果不完整。
     def normalize_start_end(start_value, end_value):
         def norm_one(value, is_start):
             if not value:
@@ -25,6 +27,7 @@ def register_routes(app, *, auth, runtime_state, camera_service, vision_service,
             return db_device_id
         return int(raw_value)
 
+    # 将“实时状态 + 历史数据 + 灌溉策略”组合成一次完整诊断，供首页和 AI 助手复用。
     def build_diagnosis(device_id: int):
         current_data = runtime_state.snapshot_latest_data()
         history_rows = db.query_sensor_history(device_id=device_id, limit=36)
@@ -58,6 +61,7 @@ def register_routes(app, *, auth, runtime_state, camera_service, vision_service,
         if not camera_service.available:
             return jsonify({"status": "error", "message": "摄像头模块不可用或未初始化。"}), 503
         try:
+            # 拍照接口只负责落盘并返回静态资源路径，展示逻辑由前端处理。
             filename, filepath = camera_service.capture("saffron")
             print(f"照片已保存至: {filepath}")
             return jsonify({
@@ -73,6 +77,7 @@ def register_routes(app, *, auth, runtime_state, camera_service, vision_service,
         if not camera_service.available:
             return jsonify({"status": "error", "message": "摄像头模块不可用或未初始化。"}), 503
         try:
+            # 视觉分析固定走“先抓拍，再分析”的链路，保证分析对象始终是最新画面。
             _, filepath = camera_service.capture("capture_for_analysis")
             analysis_result = vision_service.analyze_flower_color(filepath)
             analysis_result["analysis_image_url"] = url_for(
@@ -90,6 +95,7 @@ def register_routes(app, *, auth, runtime_state, camera_service, vision_service,
             env_data = runtime_state.snapshot_latest_data()
             payload = request.get_json() or {}
             user_msg = payload.get("message", "请简短评估当前环境是否适合藏红花生长，并给出建议。")
+            # 先生成规则诊断，再把结果作为上下文传给本地 LLM，减少纯生成式回答的漂移。
             diagnosis = build_diagnosis(db_device_id)
             response = llm_service.respond(env_data, user_msg, diagnosis=diagnosis)
             return jsonify({
@@ -112,6 +118,7 @@ def register_routes(app, *, auth, runtime_state, camera_service, vision_service,
         command = payload.get("command")
         if not command:
             return jsonify({"status": "error", "message": "Command not provided"}), 400
+        # 路由层只做鉴权和协议校验，真正的串口写入与日志记录交给 DeviceService。
         success = device_service.send_command(command)
         if success:
             return jsonify({"status": "success", "message": f"Command '{command}' sent."})
@@ -199,6 +206,7 @@ def register_routes(app, *, auth, runtime_state, camera_service, vision_service,
     @app.route("/api/v1/policy/irrigation", methods=["POST"])
     def set_irrigation_policy_api():
         payload = request.get_json(silent=True) or {}
+        # 兼容 header、body、query 三种 token 传入方式，方便页面和脚本复用接口。
         provided = request.headers.get("X-Admin-Token") or payload.get("admin_token") or request.args.get("admin_token")
         user = auth.get_current_user()
         if not auth.is_admin_request(user=user, provided_token=provided):
@@ -240,6 +248,7 @@ def register_routes(app, *, auth, runtime_state, camera_service, vision_service,
             return jsonify({"error": "invalid limit/offset/device_id"}), 400
         rows = db.query_sensor_history(device_id=device_id, start=start, end=end, limit=limit, offset=offset)
         output = io.StringIO()
+        # 导出接口保持最朴素的 CSV 结构，便于直接导入 Excel 或科研分析脚本。
         writer = csv.writer(output)
         writer.writerow(["id", "device_id", "timestamp", "temperature", "humidity", "lux", "soil"])
         for row in rows:
