@@ -1,7 +1,7 @@
 from llama_cpp import Llama
 import sys
 
-model_path = "/home/rpi/fyp/edge-server/models/Qwen3.5-0.8B-Q4_K_M.gguf"
+model_path = "/home/rpi/fyp/edge-server/models/qwen2.5-0.5b-instruct-q4_k_m.gguf"
 print(f"尝试加载模型: {model_path}")
 
 try:
