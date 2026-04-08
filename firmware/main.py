@@ -54,6 +54,24 @@ dht11, light_sensor, soil_adc, paj_sensor = None, None, None, None
 pump_relay, led_strip_relay = None, None
 display = None
 
+# --- 智能执行器策略参数 ---
+MANUAL_OVERRIDE_MS = 10 * 60 * 1000
+LED_STRIP_ON_LUX = 120
+LED_STRIP_OFF_LUX = 180
+LED_STRIP_EVAL_INTERVAL_MS = 5000
+
+smart_state = {
+    'warning_auto_enabled': True,
+    'warning_override_until': 0,
+    'warning_level': 'unknown',
+    'warning_blink_on': False,
+    'warning_last_level': None,
+    'warning_next_toggle': 0,
+    'strip_auto_enabled': True,
+    'strip_override_until': 0,
+    'strip_next_eval': 0,
+}
+
 # 初始化 DHT11
 try: 
     # 直接实例化，不再使用工厂函数
@@ -97,6 +115,98 @@ try:
     print("LED灯带继电器(B12)初始化成功")
 except Exception as e: print(f"LED灯带继电器初始化失败: {e}")
 
+# --- 智能控制辅助逻辑 ---
+def _set_status_led(on):
+    if status_led:
+        status_led.value(0 if on else 1)
+
+def _is_override_active(until_ms, now_ms):
+    return bool(until_ms) and time.ticks_diff(until_ms, now_ms) > 0
+
+def _compute_warning_level(data):
+    score = 0
+
+    temp = data.get('temp')
+    humi = data.get('humi')
+    soil = data.get('soil')
+
+    if temp is None or humi is None or soil is None:
+        score += 1
+
+    if temp is not None:
+        if temp < 10 or temp > 32:
+            score += 2
+        elif temp < 14 or temp > 28:
+            score += 1
+
+    if humi is not None:
+        if humi < 25 or humi > 90:
+            score += 2
+        elif humi < 35 or humi > 80:
+            score += 1
+
+    if soil is not None:
+        if soil < 25:
+            score += 2
+        elif soil < 35:
+            score += 1
+
+    if score >= 4:
+        return 'high'
+    if score >= 2:
+        return 'medium'
+    return 'low'
+
+def apply_warning_led_policy(data, now_ms):
+    if not status_led:
+        return
+
+    if not smart_state['warning_auto_enabled']:
+        return
+    if _is_override_active(smart_state['warning_override_until'], now_ms):
+        return
+
+    level = _compute_warning_level(data)
+    smart_state['warning_level'] = level
+
+    if level != smart_state['warning_last_level']:
+        smart_state['warning_last_level'] = level
+        smart_state['warning_blink_on'] = False
+        smart_state['warning_next_toggle'] = 0
+
+    if level == 'low':
+        _set_status_led(False)
+        smart_state['warning_blink_on'] = False
+        return
+
+    interval = 200 if level == 'high' else 700
+    if time.ticks_diff(now_ms, smart_state['warning_next_toggle']) >= 0:
+        smart_state['warning_blink_on'] = not smart_state['warning_blink_on']
+        _set_status_led(smart_state['warning_blink_on'])
+        smart_state['warning_next_toggle'] = time.ticks_add(now_ms, interval)
+
+def apply_led_strip_policy(data, now_ms):
+    if not led_strip_relay:
+        return
+
+    if not smart_state['strip_auto_enabled']:
+        return
+    if _is_override_active(smart_state['strip_override_until'], now_ms):
+        return
+    if time.ticks_diff(now_ms, smart_state['strip_next_eval']) < 0:
+        return
+
+    smart_state['strip_next_eval'] = time.ticks_add(now_ms, LED_STRIP_EVAL_INTERVAL_MS)
+    lux = data.get('lux')
+    if lux is None:
+        return
+
+    current_on = bool(led_strip_relay.value())
+    if (not current_on) and lux <= LED_STRIP_ON_LUX:
+        led_strip_relay.high()
+    elif current_on and lux >= LED_STRIP_OFF_LUX:
+        led_strip_relay.low()
+
 # --- OLED 显示逻辑 ---
 def update_display(data, page_num):
     if not display: return
@@ -126,10 +236,13 @@ def update_display(data, page_num):
         pump_state = "ON" if pump_relay and pump_relay.value() else "OFF"
         led_strip_state = "ON" if led_strip_relay and led_strip_relay.value() else "OFF"
         status_led_state = "ON" if status_led and not status_led.value() else "OFF"
+        now_ms = time.ticks_ms()
+        strip_mode = "AUTO" if smart_state['strip_auto_enabled'] and not _is_override_active(smart_state['strip_override_until'], now_ms) else "MAN"
+        warning_mode = "AUTO" if smart_state['warning_auto_enabled'] and not _is_override_active(smart_state['warning_override_until'], now_ms) else "MAN"
         
         pump_line = f"{'>' if control_page_selection == 0 else ' '} Pump  : {pump_state}"
-        led_strip_line = f"{'>' if control_page_selection == 1 else ' '} Strip : {led_strip_state}"
-        status_led_line = f"{'>' if control_page_selection == 2 else ' '} LED   : {status_led_state}"
+        led_strip_line = f"{'>' if control_page_selection == 1 else ' '} Strip : {led_strip_state}/{strip_mode}"
+        status_led_line = f"{'>' if control_page_selection == 2 else ' '} LED   : {status_led_state}/{warning_mode}"
         
         display.text(pump_line, 0, 18)
         display.text(led_strip_line, 0, 31)
@@ -149,6 +262,7 @@ def update_display(data, page_num):
 # --- 命令处理 ---
 def process_command(cmd):
     cmd = cmd.strip()
+    now_ms = time.ticks_ms()
     try:
         # 新版串口协议使用 JSON，便于边缘服务器统一扩展执行器命令。
         data = json.loads(cmd)
@@ -158,14 +272,41 @@ def process_command(cmd):
             if action == 'on': pump_relay.high(); response = '{"response": "Pump is ON"}'
             elif action == 'off': pump_relay.low(); response = '{"response": "Pump is OFF"}'
         elif actuator == 'led_strip' and led_strip_relay:
-            if action == 'on': led_strip_relay.high(); response = '{"response": "LED Strip is ON"}'
-            elif action == 'off': led_strip_relay.low(); response = '{"response": "LED Strip is OFF"}'
+            if action == 'on':
+                led_strip_relay.high()
+                smart_state['strip_override_until'] = time.ticks_add(now_ms, MANUAL_OVERRIDE_MS)
+                response = '{"response": "LED Strip is ON (manual override 10min)"}'
+            elif action == 'off':
+                led_strip_relay.low()
+                smart_state['strip_override_until'] = time.ticks_add(now_ms, MANUAL_OVERRIDE_MS)
+                response = '{"response": "LED Strip is OFF (manual override 10min)"}'
+            elif action == 'auto':
+                smart_state['strip_override_until'] = 0
+                response = '{"response": "LED Strip auto mode resumed"}'
+        elif actuator == 'status_led' and status_led:
+            if action == 'on':
+                _set_status_led(True)
+                smart_state['warning_override_until'] = time.ticks_add(now_ms, MANUAL_OVERRIDE_MS)
+                response = '{"response": "Status LED is ON (manual override 10min)"}'
+            elif action == 'off':
+                _set_status_led(False)
+                smart_state['warning_override_until'] = time.ticks_add(now_ms, MANUAL_OVERRIDE_MS)
+                response = '{"response": "Status LED is OFF (manual override 10min)"}'
+            elif action == 'auto':
+                smart_state['warning_override_until'] = 0
+                response = '{"response": "Status LED auto mode resumed"}'
         if response: print(response)
         else: print('{"error": "Unknown or unavailable actuator"}')
     except (ValueError, KeyError):
         # 保留旧版 status LED 简写命令，兼容现有 Web 前端。
-        if cmd == "led_on": status_led.low(); print('{"response": "Status LED is ON"}')
-        elif cmd == "led_off": status_led.high(); print('{"response": "Status LED is OFF"}')
+        if cmd == "led_on":
+            _set_status_led(True)
+            smart_state['warning_override_until'] = time.ticks_add(now_ms, MANUAL_OVERRIDE_MS)
+            print('{"response": "Status LED is ON (manual override 10min)"}')
+        elif cmd == "led_off":
+            _set_status_led(False)
+            smart_state['warning_override_until'] = time.ticks_add(now_ms, MANUAL_OVERRIDE_MS)
+            print('{"response": "Status LED is OFF (manual override 10min)"}')
         else: print(f'{{"error": "Unknown command: {cmd}"}}')
 
 # --- 主循环 ---
@@ -179,6 +320,9 @@ current_data_packet = {"cycle": 0, "gesture": None}
 
 while True:
     current_time = time.ticks_ms()
+
+    apply_warning_led_policy(current_data_packet, current_time)
+    apply_led_strip_policy(current_data_packet, current_time)
     
     # 手势处理
     if paj_sensor and time.ticks_diff(current_time, last_gesture_process_time) > GESTURE_COOLDOWN:
@@ -200,8 +344,13 @@ while True:
                     elif gesture_name == "向后": control_page_selection = (control_page_selection - 1 + NUM_CONTROL_ITEMS) % NUM_CONTROL_ITEMS
                     elif gesture_name in ("向上", "向下"): # 触发动作
                         if control_page_selection == 0 and pump_relay: pump_relay.value(not pump_relay.value())
-                        elif control_page_selection == 1 and led_strip_relay: led_strip_relay.value(not led_strip_relay.value())
-                        elif control_page_selection == 2 and status_led: status_led.value(not status_led.value())
+                        elif control_page_selection == 1 and led_strip_relay:
+                            led_strip_relay.value(not led_strip_relay.value())
+                            smart_state['strip_override_until'] = time.ticks_add(current_time, MANUAL_OVERRIDE_MS)
+                        elif control_page_selection == 2 and status_led:
+                            current_on = not bool(status_led.value())
+                            _set_status_led(not current_on)
+                            smart_state['warning_override_until'] = time.ticks_add(current_time, MANUAL_OVERRIDE_MS)
                     needs_display_update = True
                 
                 if needs_display_update: update_display(current_data_packet, current_display_page)
@@ -240,6 +389,10 @@ while True:
                 if WET <= raw <= DRY + 2000: 
                     current_data_packet['soil'] = round(max(0, min(100, 100 * (DRY - raw) / (DRY - WET))))
             except: pass
+
+        current_data_packet['warning_level'] = smart_state['warning_level']
+        current_data_packet['strip_auto'] = not _is_override_active(smart_state['strip_override_until'], current_time)
+        current_data_packet['warning_auto'] = not _is_override_active(smart_state['warning_override_until'], current_time)
                 
         print(json.dumps(current_data_packet))
         update_display(current_data_packet, current_display_page)
