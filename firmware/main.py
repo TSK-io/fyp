@@ -67,6 +67,7 @@ LED_STRIP_EVAL_INTERVAL_MS = 5000
 smart_state = {
     'warning_auto_enabled': True,
     'warning_level': 'unknown',
+    'warning_health_score': None,
     'warning_blink_on': False,
     'warning_last_level': None,
     'warning_next_toggle': 0,
@@ -122,37 +123,42 @@ def _set_status_led(on):
     if status_led:
         status_led.value(0 if on else 1)
 
+def _score_metric(value, ideal_low, ideal_high, ok_low, ok_high):
+    if value is None:
+        return None
+
+    value = float(value)
+    if ideal_low <= value <= ideal_high:
+        return 100
+    if ok_low <= value < ideal_low:
+        ratio = (value - ok_low) / max(ideal_low - ok_low, 1e-6)
+        return int(round(60 + 40 * ratio))
+    if ideal_high < value <= ok_high:
+        ratio = (ok_high - value) / max(ok_high - ideal_high, 1e-6)
+        return int(round(60 + 40 * ratio))
+
+    distance = (ok_low - value) if value < ok_low else (value - ok_high)
+    return max(0, int(round(45 - distance * 4)))
+
+def _compute_health_score(data):
+    scores = [
+        _score_metric(data.get('temp'), 16.0, 22.0, 10.0, 28.0),
+        _score_metric(data.get('humi'), 45.0, 65.0, 30.0, 80.0),
+        _score_metric(data.get('lux'), 1500.0, 8000.0, 300.0, 16000.0),
+        _score_metric(data.get('soil'), 35.0, 55.0, 20.0, 75.0),
+    ]
+    valid_scores = [item for item in scores if item is not None]
+    if not valid_scores:
+        return None
+    return int(round(sum(valid_scores) / len(valid_scores)))
+
 def _compute_warning_level(data):
-    score = 0
-
-    temp = data.get('temp')
-    humi = data.get('humi')
-    soil = data.get('soil')
-
-    if temp is None or humi is None or soil is None:
-        score += 1
-
-    if temp is not None:
-        if temp < 10 or temp > 32:
-            score += 2
-        elif temp < 14 or temp > 28:
-            score += 1
-
-    if humi is not None:
-        if humi < 25 or humi > 90:
-            score += 2
-        elif humi < 35 or humi > 80:
-            score += 1
-
-    if soil is not None:
-        if soil < 25:
-            score += 2
-        elif soil < 35:
-            score += 1
-
-    if score >= 4:
+    health_score = _compute_health_score(data)
+    if health_score is None:
+        return 'unknown'
+    if health_score < 60:
         return 'high'
-    if score >= 2:
+    if health_score < 80:
         return 'medium'
     return 'low'
 
@@ -163,6 +169,8 @@ def apply_warning_led_policy(data, now_ms):
     if not smart_state['warning_auto_enabled']:
         return
 
+    health_score = _compute_health_score(data)
+    smart_state['warning_health_score'] = health_score
     level = _compute_warning_level(data)
     smart_state['warning_level'] = level
 
@@ -171,12 +179,19 @@ def apply_warning_led_policy(data, now_ms):
         smart_state['warning_blink_on'] = False
         smart_state['warning_next_toggle'] = 0
 
-    if level == 'low':
+    # 需求: 综合健康分低于 80 时闪烁；80 及以上视为安全状态，熄灭告警灯。
+    if health_score is not None and health_score >= 80:
         _set_status_led(False)
         smart_state['warning_blink_on'] = False
         return
 
-    interval = 200 if level == 'high' else 700
+    if health_score is None:
+        interval = 1200
+    elif health_score < 60:
+        interval = 250
+    else:
+        interval = 600
+
     if time.ticks_diff(now_ms, smart_state['warning_next_toggle']) >= 0:
         smart_state['warning_blink_on'] = not smart_state['warning_blink_on']
         _set_status_led(smart_state['warning_blink_on'])
@@ -403,6 +418,7 @@ while True:
             except: pass
 
         current_data_packet['warning_level'] = smart_state['warning_level']
+        current_data_packet['health_score'] = smart_state['warning_health_score']
         current_data_packet['strip_auto'] = smart_state['strip_auto_enabled']
         current_data_packet['warning_auto'] = smart_state['warning_auto_enabled']
                 
