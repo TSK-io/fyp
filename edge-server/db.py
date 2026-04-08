@@ -11,6 +11,7 @@ _conn = None
 def _connect():
     global _conn
     if _conn is None:
+        # 全局复用一个 SQLite 连接，并通过锁串行化写操作，适合当前单机边缘场景。
         _conn = sqlite3.connect(_DB_PATH, check_same_thread=False)
         _conn.row_factory = sqlite3.Row
         _conn.execute('PRAGMA journal_mode=WAL;')
@@ -21,6 +22,7 @@ def _connect():
 def create_tables():
     conn = _connect()
     with _db_lock:
+        # 这里同时承担“初始化表结构”和“轻量迁移”的职责，启动时重复执行也安全。
         # users
         conn.execute(
             """
@@ -130,6 +132,7 @@ def create_tables():
 def ensure_default_device(name: str = 'stm32_device_1') -> int:
     conn = _connect()
     with _db_lock:
+        # 默认设备记录让系统在单设备模式下不需要额外的初始化向导。
         cur = conn.execute('SELECT id FROM devices WHERE name=?', (name,))
         row = cur.fetchone()
         if row:
@@ -147,6 +150,7 @@ def ensure_default_irrigation_policy(device_id: int,
                                      cooldown_seconds: int = 60):
     conn = _connect()
     with _db_lock:
+        # 仅在设备首次启动时写入默认策略，避免覆盖管理员后来保存的参数。
         row = conn.execute(
             'SELECT id FROM irrigation_policies WHERE device_id=? ORDER BY id DESC LIMIT 1',
             (device_id,),
@@ -198,6 +202,7 @@ def query_sensor_history(device_id: int | None = None, start: str | None = None,
     Timestamps use 'YYYY-MM-DD HH:MM:SS' string comparison.
     """
     conn = _connect()
+    # 用拼接 SQL 的方式复用同一套筛选逻辑，支持历史页和诊断服务共用。
     sql = [
         'SELECT id, device_id, temperature, humidity, lux, soil, timestamp',
         'FROM sensor_data WHERE 1=1'
@@ -248,6 +253,7 @@ def query_device_status(device_id: int):
     """Return device info with basic aggregates."""
     conn = _connect()
     with _db_lock:
+        # 这里顺带返回近 24 小时采样量和最新时间，便于前端快速判断设备是否活跃。
         row = conn.execute(
             """
             SELECT d.id, d.name, d.description, d.last_seen,
@@ -268,6 +274,7 @@ def query_device_status(device_id: int):
 def get_irrigation_policy(device_id: int):
     conn = _connect()
     with _db_lock:
+        # 每个设备只取最新一条策略记录，旧记录不直接删除，方便保留演进痕迹。
         row = conn.execute(
             """
             SELECT id, device_id, enabled, soil_threshold_min, watering_seconds, cooldown_seconds, updated_at
@@ -287,6 +294,7 @@ def upsert_irrigation_policy(device_id: int, enabled: int,
                               cooldown_seconds: int | None):
     conn = _connect()
     with _db_lock:
+        # 对外暴露为 upsert，屏蔽“新增还是更新”的分支细节。
         cur = conn.execute('SELECT id FROM irrigation_policies WHERE device_id=? ORDER BY id DESC LIMIT 1', (device_id,))
         row = cur.fetchone()
         if row:
@@ -311,6 +319,7 @@ def query_control_logs_range(device_id: int | None = None,
                              limit: int = 100,
                              offset: int = 0):
     conn = _connect()
+    # 历史图表会用 actuator 过滤出 pump 开关区间，为曲线加上浇水高亮带。
     sql = [
         'SELECT id, device_id, actuator, action, raw_command, success, created_at',
         'FROM control_logs WHERE 1=1'
@@ -367,6 +376,7 @@ def get_user_by_id(user_id: int):
 def create_user(username: str, password_hash: str) -> int:
     conn = _connect()
     with _db_lock:
+        # 返回新用户 id，便于注册完成后直接签发 token。
         conn.execute('INSERT INTO users(username, password_hash) VALUES(?, ?)', (username, password_hash))
         conn.commit()
         r = conn.execute('SELECT id FROM users WHERE username=?', (username,)).fetchone()
@@ -376,6 +386,7 @@ def create_user(username: str, password_hash: str) -> int:
 def ensure_role(name: str) -> int:
     conn = _connect()
     with _db_lock:
+        # 角色表采用“先查后建”，避免依赖单独的种子脚本。
         r = conn.execute('SELECT id FROM roles WHERE name=?', (name,)).fetchone()
         if r:
             return int(r['id'])

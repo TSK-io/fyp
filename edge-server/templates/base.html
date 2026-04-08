@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>{% block title %}藏红花培育系统{% endblock %}</title>
+  {# 所有页面共享同一套字体和壳层样式，再按需注入各自资源。 #}
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -12,6 +13,7 @@
 </head>
 <body class="{% block body_class %}{% endblock %}">
   {% block body %}{% endblock %}
+  {# 公共 JS 负责鉴权与策略表单复用，页面脚本在它之后加载。 #}
   <script src="{{ url_for('static', filename='app-common.js') }}"></script>
   {% block scripts %}{% endblock %}
 </body>

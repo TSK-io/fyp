@@ -8,6 +8,7 @@ class AuthManager:
     def __init__(self, db_module, secret_key: str, token_max_age: int, admin_token: str):
         self.db = db_module
         self.admin_token = admin_token
+        # 使用 itsdangerous 生成带时效的签名 token，部署简单，不依赖额外 JWT 服务。
         self.serializer = URLSafeTimedSerializer(secret_key, salt="auth-token")
         self.token_max_age = token_max_age
 
@@ -28,6 +29,7 @@ class AuthManager:
         return None
 
     def get_current_user(self):
+        # 统一把 token 解析、查库和角色填充放在一起，路由层无需重复处理。
         token = self.get_bearer_token()
         if not token:
             return None
@@ -41,6 +43,7 @@ class AuthManager:
         return user
 
     def is_admin_request(self, user=None, provided_token=None) -> bool:
+        # 允许“登录管理员”或“独立 admin token”两种方式通过鉴权，方便页面和脚本调用。
         if provided_token == self.admin_token:
             return True
         if user is None:

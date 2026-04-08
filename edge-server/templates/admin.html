@@ -20,11 +20,13 @@
         </nav>
       </header>
 
+      {# 顶部条只展示当前用户是否已登录，不作为硬拦截。 #}
       <div id="auth-info" class="panel auth-banner pill-status">鉴权状态检测中...</div>
 
       <section class="page-section admin-layout">
         <article class="panel admin-card">
           <h2 class="section-heading">边缘自动化策略</h2>
+          {# 这里配置的是数据库中的持久化策略，后台线程会持续读取执行。 #}
           <div class="admin-form">
             <label class="admin-form__toggle" for="en">
               <input type="checkbox" id="en">
@@ -56,6 +58,7 @@
             <div class="admin-toolbar__heading">
               <h2 class="section-heading">终端设备审计日志</h2>
             </div>
+            {# 刷新只重拉日志表，不影响左侧策略表单内容。 #}
             <div class="admin-toolbar__actions">
               <input id="limit" type="number" min="10" max="500" step="10" value="100">
               <button id="reload" class="button button--ghost">刷新列表</button>

@@ -14,6 +14,7 @@
 
   async function loadPolicy() {
     try {
+      // 管理页与首页共享同一策略接口，但这里偏向“完整配置”场景。
       await EdgeApp.loadPolicyIntoForm({
         enabled: "en",
         threshold: "th",
@@ -47,6 +48,7 @@
     const limit = Math.max(10, Math.min(500, parseInt(els.limit.value || "100", 10)));
     els.status.textContent = "加载中...";
     try {
+      // 审计日志只关心控制动作结果，不重复展示原始整条命令载荷。
       const response = await EdgeApp.fetchJson(`/api/v1/control/logs?limit=${limit}`);
       const items = response.items || [];
       els.logs.innerHTML = items.map((item) => `
@@ -64,6 +66,7 @@
   }
 
   async function checkAuth() {
+    // 页面顶部只做轻量状态提示，不阻止未登录用户浏览配置界面。
     const user = await EdgeApp.fetchCurrentUser();
     if (!user) {
       els.authInfo.className = "panel auth-banner pill-status pill-status--error";
@@ -77,6 +80,7 @@
   document.getElementById("save").addEventListener("click", savePolicy);
   document.getElementById("reload").addEventListener("click", loadLogs);
 
+  // 首屏先拉策略和日志，再异步补充当前登录态。
   loadPolicy();
   loadLogs();
   checkAuth();

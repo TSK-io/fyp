@@ -4,6 +4,7 @@ from datetime import datetime
 
 
 class AgronomyService:
+    # 这里定义“理想区间”和“可接受区间”，后续评分、告警和建议都围绕它展开。
     SENSOR_RULES = {
         "temperature": {
             "label": "温度",
@@ -33,6 +34,7 @@ class AgronomyService:
 
     def build_diagnosis(self, current_data: dict, history_rows: list[dict] | None = None,
                         policy: dict | None = None, irrigation_state: dict | None = None) -> dict:
+        # 诊断输出是首页智能面板和 LLM 提示词的共同上游，所以尽量保持结构稳定。
         history = self._prepare_history(history_rows or [], current_data or {})
         metrics = [self._score_sensor(key, (current_data or {}).get(key)) for key in self.SENSOR_RULES]
         valid_scores = [item["score"] for item in metrics if item["score"] is not None]
@@ -103,6 +105,7 @@ class AgronomyService:
             effective_threshold += delta
             factors.append({"reason": reason, "delta": round(delta, 1)})
 
+        # 动态阈值不是固定常量，而是根据蒸腾压力、光照和近期土壤走势做补偿。
         if current_temp is not None and current_temp >= 28:
             apply_factor("高温导致蒸腾增强", 4.0)
         elif current_temp is not None and current_temp >= 24:
@@ -127,6 +130,7 @@ class AgronomyService:
         gap = round((effective_threshold - current_soil), 1) if current_soil is not None else None
         recommended_duration = base_duration if base_duration is not None else 0
         if gap is not None and base_duration:
+            # 土壤偏离越大，建议浇水时长越长，但仍受基准时长约束，避免过度补水。
             if gap >= 12:
                 recommended_duration = min(base_duration + 6, int(base_duration * 1.75))
             elif gap >= 6:
@@ -174,6 +178,7 @@ class AgronomyService:
         }
 
     def format_assistant_context(self, diagnosis: dict) -> str:
+        # 把结构化诊断压成一段短上下文，适合放进提示词或日志。
         alerts = "；".join(item["title"] for item in diagnosis.get("alerts", [])[:3]) or "无明显异常"
         recommendations = "；".join(diagnosis.get("recommendations", [])[:3]) or "保持当前策略"
         irrigation = diagnosis.get("irrigation_decision", {})
@@ -261,6 +266,7 @@ class AgronomyService:
         alerts: list[dict] = []
         metric_map = {item["key"]: item for item in metrics}
 
+        # 告警优先反映“控制风险”和“数据可信度”，而不只是单个传感器是否越界。
         if freshness["stale"]:
             alerts.append({
                 "severity": "high",
@@ -326,6 +332,7 @@ class AgronomyService:
         return recommendations[:5]
 
     def _resolve_risk_level(self, overall_score: int, alerts: list[dict]) -> dict:
+        # 风险等级同时考虑分数和告警权重，避免“均值高但存在致命问题”被低估。
         severity_weight = {"high": 3, "medium": 2, "low": 1}
         risk_points = sum(severity_weight.get(item.get("severity"), 1) for item in alerts)
         if overall_score < 45 or risk_points >= 5:
@@ -376,6 +383,7 @@ class AgronomyService:
             "lux": 500.0,
             "soil": 2.0,
         }[key]
+        # 不同指标的“平稳”阈值不同，避免光照和温度共用同一个灵敏度。
         if abs(delta) < stable_threshold:
             direction = "stable"
             text = f"{rule['label']}整体平稳"
@@ -396,6 +404,7 @@ class AgronomyService:
         }
 
     def _prepare_history(self, history_rows: list[dict], current_data: dict) -> list[dict]:
+        # 把数据库历史和当前内存快照拼成统一序列，减少“最新一帧未落库”带来的诊断延迟。
         prepared = []
         for row in history_rows:
             timestamp = row.get("timestamp")

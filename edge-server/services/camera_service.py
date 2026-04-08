@@ -19,6 +19,7 @@ class CameraService:
         self.picam2 = None
         if PICAMERA_AVAILABLE:
             try:
+                # 这里只先创建设备对象，真正 start 放到应用启动阶段执行。
                 self.picam2 = Picamera2()
                 self.available = True
                 print("picamera2 库加载成功，摄像头对象已创建。")
@@ -28,6 +29,7 @@ class CameraService:
     def start(self):
         if not self.available or not self.picam2:
             return
+        # 项目只需要静态抓拍，所以直接使用 still configuration。
         still_config = self.picam2.create_still_configuration()
         self.picam2.configure(still_config)
         self.picam2.start()
@@ -36,6 +38,7 @@ class CameraService:
     def capture(self, prefix: str = "saffron") -> tuple[str, str]:
         if not self.available or not self.picam2:
             raise RuntimeError("摄像头模块不可用或未初始化。")
+        # 文件名带时间戳，便于追踪一次分析对应的原始拍照时刻。
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         filename = f"{prefix}_{timestamp}.jpg"
         filepath = os.path.join(self.captures_dir, filename)

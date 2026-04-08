@@ -39,6 +39,7 @@ except ImportError as e:
 print("\n=== 藏红花培育系统 v10.0 ===")
 
 # --- 全局状态管理 ---
+# OLED 共有 3 个页面: 主页、控制页、信息页。
 SCREEN_WIDTH = 128
 SCREEN_HEIGHT = 64
 I2C_ADDRESS = 0x3C
@@ -61,6 +62,7 @@ except Exception as e: print(f"DHT11 初始化失败: {e}")
 
 # 初始化 I2C 设备
 try:
+    # 该 I2C 总线同时挂载光照、OLED 和手势模块，因此初始化失败会影响多个功能。
     i2c = machine.I2C(1, freq=200000)
     print("I2C 总线初始化成功")
     
@@ -112,6 +114,7 @@ def update_display(data, page_num):
     display.text("----------------", 0, 9)
 
     if page_num == 0:
+        # 主页面展示树莓派最关心的一组实时感知数据。
         temp_str = f"T:{data.get('temp', '--')}C"; humi_str = f"H:{data.get('humi', '--')}%"
         lux_str  = f"L:{data.get('lux', '--')}"; soil_str = f"S:{data.get('soil', '--')}%"
         display.text(temp_str, 0, 19); display.text(humi_str, 64, 19)
@@ -119,6 +122,7 @@ def update_display(data, page_num):
         display.text(f"Ges: {data.get('gesture', '--')}", 0, 55)
 
     elif page_num == 1:
+        # 控制页允许通过手势直接切换本地执行器状态。
         pump_state = "ON" if pump_relay and pump_relay.value() else "OFF"
         led_strip_state = "ON" if led_strip_relay and led_strip_relay.value() else "OFF"
         status_led_state = "ON" if status_led and not status_led.value() else "OFF"
@@ -133,6 +137,7 @@ def update_display(data, page_num):
         display.text("U/D:Sel L/R:Pg", 0, 55)
 
     elif page_num == 2:
+        # 信息页偏向调试用途，用于确认驱动模式和固件运行状态。
         driver_mode = dht11.driver_mode if dht11 else "N/A"
         display.text(f"DHT: {driver_mode}", 0, 20)
         display.text(f"Loop: {data.get('cycle', 0)}", 0, 34)
@@ -145,6 +150,7 @@ def update_display(data, page_num):
 def process_command(cmd):
     cmd = cmd.strip()
     try:
+        # 新版串口协议使用 JSON，便于边缘服务器统一扩展执行器命令。
         data = json.loads(cmd)
         actuator, action = data.get('actuator'), data.get('action')
         response = None
@@ -157,6 +163,7 @@ def process_command(cmd):
         if response: print(response)
         else: print('{"error": "Unknown or unavailable actuator"}')
     except (ValueError, KeyError):
+        # 保留旧版 status LED 简写命令，兼容现有 Web 前端。
         if cmd == "led_on": status_led.low(); print('{"response": "Status LED is ON"}')
         elif cmd == "led_off": status_led.high(); print('{"response": "Status LED is OFF"}')
         else: print(f'{{"error": "Unknown command: {cmd}"}}')
@@ -181,6 +188,7 @@ while True:
                 last_valid_gesture = gesture_name; gesture_display_timer = current_time; last_gesture_process_time = current_time
                 needs_display_update = False
                 
+                # 左右手势用于翻页；控制页中再用前后/上下做选择和触发。
                 if gesture_name == "向右": 
                     current_display_page = (current_display_page + 1) % NUM_PAGES
                     needs_display_update = True
@@ -210,6 +218,7 @@ while True:
     if time.ticks_diff(current_time, last_sensor_read_time) >= 1000:
         last_sensor_read_time = current_time; cycle_count += 1
         
+        # 手势只在短时间窗口内回传给树莓派，避免旧手势长期滞留在 UI 上。
         current_gesture_for_pi = last_valid_gesture if (last_valid_gesture and time.ticks_diff(current_time, gesture_display_timer) < GESTURE_TIMEOUT) else None
         if not current_gesture_for_pi: last_valid_gesture = None
         
@@ -226,6 +235,7 @@ while True:
             
         if soil_adc:
             try:
+                # 通过经验干湿标定值把 ADC 原始读数映射到 0-100%。
                 raw, DRY, WET = soil_adc.read_u16(), 59000, 26000
                 if WET <= raw <= DRY + 2000: 
                     current_data_packet['soil'] = round(max(0, min(100, 100 * (DRY - raw) / (DRY - WET))))

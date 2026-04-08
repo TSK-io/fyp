@@ -23,6 +23,7 @@ class LocalLLMService:
 
     def get_model(self):
         if self._model is None and self.available:
+            # 模型按需懒加载，避免应用启动时就占满树莓派内存。
             print("正在加载 Qwen 模型到内存，请稍候...")
             self._model = Llama(
                 model_path=self.model_path,
@@ -34,6 +35,7 @@ class LocalLLMService:
         return self._model
 
     def respond(self, env_data: dict, user_msg: str, diagnosis: dict | None = None) -> dict:
+        # 优先尝试本地模型；任何异常都自动回退到规则回答，保证接口始终可用。
         if self.available:
             try:
                 model = self.get_model()
@@ -56,6 +58,7 @@ class LocalLLMService:
         return self.respond(env_data, user_msg, diagnosis=diagnosis)["answer"]
 
     def _build_prompt(self, env_data: dict, user_msg: str, diagnosis: dict) -> str:
+        # 提示词同时注入原始环境数据和规则诊断，尽量让模型“基于事实回答”。
         alerts = "；".join(item["title"] for item in diagnosis.get("alerts", [])[:3]) or "无明显异常"
         recommendations = "；".join(diagnosis.get("recommendations", [])[:3]) or "保持当前策略"
         irrigation = diagnosis.get("irrigation_decision", {})
@@ -81,6 +84,7 @@ class LocalLLMService:
         )
 
     def _build_rule_based_answer(self, env_data: dict, diagnosis: dict) -> str:
+        # 降级回答尽量复用诊断摘要，避免在模型不可用时体验断崖式下降。
         summary = diagnosis.get("summary")
         recommendations = diagnosis.get("recommendations", [])
         if not summary:

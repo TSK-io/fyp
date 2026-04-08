@@ -11,6 +11,7 @@ TOKEN_MAX_AGE = int(os.environ.get("TOKEN_MAX_AGE", str(7 * 24 * 3600)))
 REQUIRE_ADMIN_FOR_CONTROL = os.environ.get("REQUIRE_ADMIN_FOR_CONTROL", "0") in ("1", "true", "TRUE")
 ADMIN_TOKEN = os.environ.get("ADMIN_TOKEN", "saffron-admin")
 
+# 这些配置默认面向树莓派单机部署，同时允许通过环境变量在 systemd 中覆盖。
 CLOUD_MQTT_IP = os.environ.get("CLOUD_MQTT_IP", "104.248.150.11")
 MQTT_TOPIC = os.environ.get("MQTT_TOPIC", "saffron/telemetry")
 
@@ -21,5 +22,6 @@ LLM_MODEL_PATH = os.path.join(BASE_DIR, "models", "qwen2.5-0.5b-instruct-q4_k_m.
 
 
 def ensure_runtime_dirs():
+    # 拍照图和分析图都作为静态资源直接对外提供，因此启动时确保目录存在。
     os.makedirs(CAPTURES_DIR, exist_ok=True)
     os.makedirs(ANALYSIS_DIR, exist_ok=True)

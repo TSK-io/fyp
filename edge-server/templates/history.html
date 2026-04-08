@@ -22,6 +22,7 @@
       </header>
 
       <section class="page-section panel history-filters">
+        {# 筛选器同时控制图表查询和 CSV 导出，保证两者口径一致。 #}
         <div class="field">
           <label for="start">开始时间</label>
           <input id="start" type="datetime-local">
@@ -48,6 +49,7 @@
         </article>
         <article class="panel chart-panel">
           <h2 class="section-heading">光照与土壤水分趋势</h2>
+          {# 土壤图会叠加水泵运行区间，方便观察补水后的回升效果。 #}
           <div id="chart-ls" class="chart-panel__canvas"></div>
         </article>
       </section>

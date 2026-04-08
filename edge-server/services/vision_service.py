@@ -6,6 +6,7 @@ import numpy as np
 
 
 class VisionService:
+    # 目前采用 HSV 颜色阈值做轻量级启发式识别，适合树莓派本地快速运行。
     COLOR_RANGES = {
         "red": [
             ([0, 120, 70], [10, 255, 255]),
@@ -37,6 +38,7 @@ class VisionService:
         return mask
 
     def _refine_mask(self, mask):
+        # 根据图像尺寸自适应核大小，避免近景和远景使用同一组固定参数。
         short_side = min(mask.shape[:2])
         open_size = self._ensure_odd(min(5, max(3, short_side // 180)))
         close_size = self._ensure_odd(min(17, max(7, short_side // 45)))
@@ -91,6 +93,7 @@ class VisionService:
         merge_padding = max(25, int(min(height, width) * 0.04))
         pending_contours = candidate_contours[1:]
 
+        # 若同一朵花被分成多个相邻色块，这里会尝试把它们合并成一个目标框。
         while pending_contours:
             merged_in_pass = False
             next_pending = []
@@ -122,6 +125,7 @@ class VisionService:
             masks[color] = refined_mask
             scores[color] = cv2.countNonZero(refined_mask)
 
+        # 用各颜色掩膜的像素面积近似判断主导颜色，再映射到生长阶段。
         detected_color = "none" if not any(scores.values()) else max(scores, key=scores.get)
         growth_stage_map = {
             "green": "花蕾期 (Budding Stage)",
@@ -142,6 +146,7 @@ class VisionService:
         if detected_color != "none":
             target_box = self._find_target_box(masks[detected_color])
             if target_box:
+                # 分析图故意做成“终端视觉界面”风格，便于演示和人工核验。
                 box_padding = max(12, int(min(height, width) * 0.015))
                 x, y, w, h = self._pad_box(target_box, width, height, box_padding)
                 line_len = max(35, min(90, min(w, h) // 4))

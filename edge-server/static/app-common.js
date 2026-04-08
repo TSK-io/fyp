@@ -7,6 +7,7 @@ window.EdgeApp = (() => {
   }
 
   function getAuthHeaders(adminToken = '') {
+    // 登录 token 和一次性的 admin token 可以同时存在，后端按更高权限处理。
     const headers = { 'Content-Type': 'application/json' };
     const loginToken = getStoredToken();
     const overrideToken = (adminToken || '').trim();
@@ -16,6 +17,7 @@ window.EdgeApp = (() => {
   }
 
   async function fetchJson(url, options = {}) {
+    // 统一封装 fetch + JSON 解析，让各页面脚本专注于业务渲染逻辑。
     const response = await fetch(url, {
       ...options,
       headers: {
@@ -36,6 +38,7 @@ window.EdgeApp = (() => {
   }
 
   function fillPolicyForm(fieldIds, policy = {}) {
+    // 后台页和首页共用同一套策略字段映射，减少重复 DOM 赋值代码。
     document.getElementById(fieldIds.enabled).checked = !!(policy.enabled === 1 || policy.enabled === true);
     document.getElementById(fieldIds.threshold).value = policy.soil_threshold_min ?? '';
     document.getElementById(fieldIds.seconds).value = policy.watering_seconds ?? '';
@@ -51,6 +54,7 @@ window.EdgeApp = (() => {
   }
 
   function buildPolicyPayload(fieldIds) {
+    // 空字符串转为 null，表示“未配置”，而不是错误地写入 0。
     const soil = readNumber(fieldIds.threshold, Number.parseFloat);
     const wateringSeconds = readNumber(fieldIds.seconds, value => Number.parseInt(value, 10));
     const cooldownSeconds = readNumber(fieldIds.cooldown, value => Number.parseInt(value, 10));

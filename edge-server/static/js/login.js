@@ -6,6 +6,7 @@
   async function doLoginRegister(url) {
     message.textContent = "正在验证...";
     try {
+      // 登录和注册共用同一套表单提交流程，只是接口地址不同。
       const result = await EdgeApp.fetchJson(url, {
         method: "POST",
         body: JSON.stringify({
@@ -18,6 +19,7 @@
       message.style.color = "var(--shell-success)";
       message.textContent = "登录成功，正在跳转...";
       setTimeout(() => {
+        // 登录后默认进入后台页，方便立刻配置策略或查看审计信息。
         window.location.href = "/admin";
       }, 500);
     } catch (error) {

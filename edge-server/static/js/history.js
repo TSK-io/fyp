@@ -6,6 +6,7 @@
   };
 
   const el = (id) => document.getElementById(id);
+  // 两张图拆开初始化，便于分别响应窗口缩放和局部重绘。
   const thChart = echarts.init(el("chart-th"));
   const lsChart = echarts.init(el("chart-ls"));
 
@@ -25,6 +26,7 @@
   }
 
   async function loadPumpIntervals(queryParams) {
+    // 通过控制日志反推水泵开关区间，再映射成 markArea 覆盖到土壤曲线图上。
     const params = new URLSearchParams(queryParams);
     params.set("actuator", "pump");
     params.set("limit", "500");
@@ -94,6 +96,7 @@
     const params = buildQueryParams();
     el("status").textContent = "加载中...";
     try {
+      // 历史数据和浇水区间并行拉取，减少页面等待时间。
       const [historyResult, intervals] = await Promise.all([
         EdgeApp.fetchJson(`${api.history}?${params.toString()}`),
         loadPumpIntervals(params),
@@ -107,6 +110,7 @@
   }
 
   function exportCsv() {
+    // 导出直接打开后端 CSV 接口，不经过前端二次拼装，避免格式偏差。
     window.open(`${api.historyCsv}?${buildQueryParams().toString()}`, "_blank");
   }
 
@@ -118,5 +122,6 @@
   });
 
   loadData();
+  // 历史页刷新频率低于实时页，避免对数据库造成不必要压力。
   setInterval(loadData, 10000);
 })();

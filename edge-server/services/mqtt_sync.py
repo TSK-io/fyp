@@ -16,6 +16,7 @@ class CloudSyncService:
         self.client.on_disconnect = self._on_disconnect
 
     def _on_connect(self, client, userdata, flags, rc, *args):
+        # 只把“已真正连上 broker”记为在线，前端会据此显示云端/自治状态。
         self.cloud_sync_ok = (rc == 0)
         if self.cloud_sync_ok:
             print("边缘节点已成功连接至云端 MQTT")
@@ -26,6 +27,7 @@ class CloudSyncService:
 
     def connect(self):
         try:
+            # 采用 connect_async + loop_start，避免阻塞 Flask 主线程。
             self.client.connect_async(self.mqtt_ip, 1883, 60)
             self.client.loop_start()
         except Exception as exc:
@@ -33,6 +35,7 @@ class CloudSyncService:
 
     def publish(self, payload: dict):
         if not self.cloud_sync_ok:
+            # 离线时静默返回 False，由边缘侧继续本地自治，不把异常扩散到主链路。
             return False
         try:
             self.client.publish(self.topic, json.dumps(payload))
