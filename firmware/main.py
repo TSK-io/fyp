@@ -39,14 +39,19 @@ except ImportError as e:
 print("\n=== 藏红花培育系统 v10.0 ===")
 
 # --- 全局状态管理 ---
-# OLED 共有 3 个页面: 主页、控制页、信息页。
+# OLED 页面:
+# 0=主页 1=水泵 2=灯带 3=状态灯 4=信息页
 SCREEN_WIDTH = 128
 SCREEN_HEIGHT = 64
 I2C_ADDRESS = 0x3C
 current_display_page = 0
-NUM_PAGES = 3
-control_page_selection = 0
-NUM_CONTROL_ITEMS = 3 
+NUM_PAGES = 5
+
+PAGE_MAIN = 0
+PAGE_PUMP = 1
+PAGE_STRIP = 2
+PAGE_STATUS_LED = 3
+PAGE_INFO = 4
 
 # --- 硬件初始化 ---
 status_led = machine.Pin('C13', machine.Pin.OUT, value=1)
@@ -206,14 +211,16 @@ def update_display(data, page_num):
     indicator_x = 128 - len(page_indicator) * 8 - 2
     
     title = " "
-    if page_num == 0: title = "MAIN"
-    elif page_num == 1: title = "CTRL"
-    elif page_num == 2: title = "INFO"
+    if page_num == PAGE_MAIN: title = "MAIN"
+    elif page_num == PAGE_PUMP: title = "PUMP"
+    elif page_num == PAGE_STRIP: title = "STRIP"
+    elif page_num == PAGE_STATUS_LED: title = "LED"
+    elif page_num == PAGE_INFO: title = "INFO"
     display.text(title, 4, 0)
     display.text(page_indicator, indicator_x, 0)
     display.text("----------------", 0, 9)
 
-    if page_num == 0:
+    if page_num == PAGE_MAIN:
         # 主页面展示树莓派最关心的一组实时感知数据。
         temp_str = f"T:{data.get('temp', '--')}C"; humi_str = f"H:{data.get('humi', '--')}%"
         lux_str  = f"L:{data.get('lux', '--')}"; soil_str = f"S:{data.get('soil', '--')}%"
@@ -221,24 +228,30 @@ def update_display(data, page_num):
         display.text(lux_str, 0, 35);  display.text(soil_str, 64, 35)
         display.text(f"Ges: {data.get('gesture', '--')}", 0, 55)
 
-    elif page_num == 1:
-        # 控制页允许通过手势直接切换本地执行器状态。
+    elif page_num == PAGE_PUMP:
+        # 每个执行器独立页面，避免先选中再触发。
         pump_state = "ON" if pump_relay and pump_relay.value() else "OFF"
-        led_strip_state = "ON" if led_strip_relay and led_strip_relay.value() else "OFF"
-        status_led_state = "ON" if status_led and not status_led.value() else "OFF"
-        strip_mode = "AUTO" if smart_state['strip_auto_enabled'] else "MAN"
-        warning_mode = "AUTO" if smart_state['warning_auto_enabled'] else "MAN"
-        
-        pump_line = f"{'>' if control_page_selection == 0 else ' '} Pump  : {pump_state}"
-        led_strip_line = f"{'>' if control_page_selection == 1 else ' '} Strip : {led_strip_state}/{strip_mode}"
-        status_led_line = f"{'>' if control_page_selection == 2 else ' '} LED   : {status_led_state}/{warning_mode}"
-        
-        display.text(pump_line, 0, 18)
-        display.text(led_strip_line, 0, 31)
-        display.text(status_led_line, 0, 44)
-        display.text("U/D:Sel L/R:Pg", 0, 55)
+        display.text(f"Pump: {pump_state}", 0, 24)
+        display.text("Up:Toggle", 0, 40)
+        display.text("L/R:Page", 0, 55)
 
-    elif page_num == 2:
+    elif page_num == PAGE_STRIP:
+        led_strip_state = "ON" if led_strip_relay and led_strip_relay.value() else "OFF"
+        strip_mode = "AUTO" if smart_state['strip_auto_enabled'] else "MAN"
+        display.text(f"Strip:{led_strip_state}", 0, 20)
+        display.text(f"Mode :{strip_mode}", 0, 34)
+        display.text("Up:Toggle", 0, 48)
+        display.text("L/R:Page", 0, 55)
+
+    elif page_num == PAGE_STATUS_LED:
+        status_led_state = "ON" if status_led and not status_led.value() else "OFF"
+        warning_mode = "AUTO" if smart_state['warning_auto_enabled'] else "MAN"
+        display.text(f"LED  :{status_led_state}", 0, 20)
+        display.text(f"Mode :{warning_mode}", 0, 34)
+        display.text("Up:Toggle", 0, 48)
+        display.text("L/R:Page", 0, 55)
+
+    elif page_num == PAGE_INFO:
         # 信息页偏向调试用途，用于确认驱动模式和固件运行状态。
         driver_mode = dht11.driver_mode if dht11 else "N/A"
         display.text(f"DHT: {driver_mode}", 0, 20)
@@ -326,25 +339,29 @@ while True:
                 last_valid_gesture = gesture_name; gesture_display_timer = current_time; last_gesture_process_time = current_time
                 needs_display_update = False
                 
-                # 左右手势用于翻页；控制页中再用前后/上下做选择和触发。
-                if gesture_name == "向右": 
+                # 简化手势:
+                # 向左/向右(兼容向前/向后) = 翻页
+                # 向上 = 当前页主动作(开关，并强制进入手动模式)
+                if gesture_name in ("向右", "向前"): 
                     current_display_page = (current_display_page + 1) % NUM_PAGES
                     needs_display_update = True
-                elif gesture_name == "向左": 
+                elif gesture_name in ("向左", "向后"): 
                     current_display_page = (current_display_page - 1 + NUM_PAGES) % NUM_PAGES
                     needs_display_update = True
-                elif current_display_page == 1: # 在控制页
-                    if gesture_name == "向前": control_page_selection = (control_page_selection + 1) % NUM_CONTROL_ITEMS
-                    elif gesture_name == "向后": control_page_selection = (control_page_selection - 1 + NUM_CONTROL_ITEMS) % NUM_CONTROL_ITEMS
-                    elif gesture_name in ("向上", "向下"): # 触发动作
-                        if control_page_selection == 0 and pump_relay: pump_relay.value(not pump_relay.value())
-                        elif control_page_selection == 1 and led_strip_relay:
-                            led_strip_relay.value(not led_strip_relay.value())
-                            smart_state['strip_auto_enabled'] = False
-                        elif control_page_selection == 2 and status_led:
-                            current_on = not bool(status_led.value())
-                            _set_status_led(not current_on)
-                            smart_state['warning_auto_enabled'] = False
+                elif gesture_name == "向上":
+                    if current_display_page == PAGE_PUMP and pump_relay:
+                        pump_relay.value(not pump_relay.value())
+                    elif current_display_page == PAGE_STRIP and led_strip_relay:
+                        # 执行器页上的手势操作默认按手动模式处理。
+                        smart_state['strip_auto_enabled'] = False
+                        led_strip_relay.value(not led_strip_relay.value())
+                    elif current_display_page == PAGE_STATUS_LED and status_led:
+                        # 执行器页上的手势操作默认按手动模式处理。
+                        smart_state['warning_auto_enabled'] = False
+                        current_on = not bool(status_led.value())
+                        _set_status_led(not current_on)
+                    else:
+                        needs_display_update = False
                     needs_display_update = True
                 
                 if needs_display_update: update_display(current_data_packet, current_display_page)
@@ -355,7 +372,8 @@ while True:
         command = sys.stdin.readline()
         if command: 
             process_command(command)
-            if current_display_page == 1: update_display(current_data_packet, current_display_page)
+            if current_display_page in (PAGE_PUMP, PAGE_STRIP, PAGE_STATUS_LED):
+                update_display(current_data_packet, current_display_page)
 
     # 传感器读取循环 (1秒一次)
     if time.ticks_diff(current_time, last_sensor_read_time) >= 1000:
