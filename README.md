@@ -33,9 +33,6 @@
 密码例如:let*********3(星号为加密部分)
 ```
 
-# 基于边缘计算的藏红花智能培育系统
-# Saffron Intelligent Cultivation System
-
 [![License](https://img.shields.io/badge/License-BSD%203--Clause-blue.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/Python-3.9%2B-green.svg)](https://www.python.org/)
 [![Platform](https://img.shields.io/badge/Platform-Raspberry%20Pi%20%7C%20STM32-orange.svg)]()
